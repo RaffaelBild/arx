@@ -361,15 +361,15 @@ public class MetricMDNMLoss extends AbstractMetricMultiDimensional {
         double score = 0d;
         HashGroupifyEntry m = groupify.getFirstEquivalenceClass();
         while (m != null) {
-            if (m.count>0) {
-                for (int dimension=0; dimension<numAttrs; dimension++){
+            for (int dimension=0; dimension<numAttrs; dimension++){
+                if (m.count>0) {
                     int value = m.key[dimension];
                     int level = transformation[dimension];
                     double share = (double)m.count * shares[dimension].getShare(value, level);
                     score += m.isNotOutlier ? share : m.count;
                 }
+                score += m.pcount - m.count;
             }
-            score += m.pcount - m.count;
             m = m.nextOrdered;
         }
         score *= -1d / numAttrs;
