@@ -809,4 +809,16 @@ public class __MetricV2 {
     public static Metric<AbstractILMultiDimensional> createStaticMetric(Map<String, List<Double>> loss, AggregateFunction function) {
         return new MetricMDStatic(function, loss);
     }
+    
+    /**
+     * Creates a new instance of the Classification metric.
+     * 
+     * @param classColumnIndex
+     * @param rowCount
+     * 
+     * @return
+     */
+    public static Metric<ILSingleDimensional> createClassificationMetric(int classColumnIndex, int rowCount) {
+        return new MetricClassification(classColumnIndex, rowCount);
+    }
 }

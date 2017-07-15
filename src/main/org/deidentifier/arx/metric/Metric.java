@@ -814,6 +814,18 @@ public abstract class Metric<T extends InformationLoss<?>> implements Serializab
     public static Metric<AbstractILMultiDimensional> createStaticMetric(Map<String, List<Double>> loss, AggregateFunction function) {
         return __MetricV2.createStaticMetric(loss, function);
     }
+    
+    /**
+     * Creates a new instance of the Classification metric.
+     * 
+     * @param classColumnIndex
+     * @param rowCount
+     * 
+     * @return
+     */
+    public static Metric<ILSingleDimensional> createClassificationMetric(int classColumnIndex, int rowCount) {
+        return __MetricV2.createClassificationMetric(classColumnIndex, rowCount);
+    }
 
     /**
      * Returns a list of all available metrics for information loss.
