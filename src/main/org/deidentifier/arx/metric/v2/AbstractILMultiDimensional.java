@@ -105,7 +105,7 @@ public abstract class AbstractILMultiDimensional extends InformationLoss<double[
     /**
      * @return the values
      */
-    protected double[] getValues() {
+    public double[] getValues() {
         return values;
     }
 

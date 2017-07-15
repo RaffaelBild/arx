@@ -17,12 +17,19 @@
 
 package org.deidentifier.arx.framework.check;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.deidentifier.arx.ARXConfiguration;
 import org.deidentifier.arx.ARXConfiguration.ARXConfigurationInternal;
+import org.deidentifier.arx.ARXResult.ScoreType;
+import org.deidentifier.arx.DataDefinition;
 import org.deidentifier.arx.framework.check.StateMachine.Transition;
 import org.deidentifier.arx.framework.check.distribution.DistributionAggregateFunction;
 import org.deidentifier.arx.framework.check.distribution.IntArrayDictionary;
 import org.deidentifier.arx.framework.check.groupify.HashGroupify;
+import org.deidentifier.arx.framework.check.groupify.HashGroupifyEntry;
 import org.deidentifier.arx.framework.check.history.History;
 import org.deidentifier.arx.framework.data.Data;
 import org.deidentifier.arx.framework.data.DataManager;
@@ -32,6 +39,9 @@ import org.deidentifier.arx.framework.lattice.Transformation;
 import org.deidentifier.arx.metric.InformationLoss;
 import org.deidentifier.arx.metric.InformationLossWithBound;
 import org.deidentifier.arx.metric.Metric;
+import org.deidentifier.arx.metric.Metric.AggregateFunction;
+import org.deidentifier.arx.metric.v2.AbstractILMultiDimensional;
+import org.deidentifier.arx.metric.v2.ILSingleDimensional;
 
 /**
  * This class orchestrates the process of transforming and analyzing a dataset.
@@ -40,6 +50,34 @@ import org.deidentifier.arx.metric.Metric;
  * @author Florian Kohlmayer
  */
 public class NodeChecker {
+    
+    /** Record wrapper */
+    class RecordWrapper {
+
+        /** Field */
+        private final int[] tuple;
+        /** Field */
+        private final int   hash;
+
+        /**
+         * Constructor
+         * @param tuple
+         */
+        public RecordWrapper(int[] tuple) {
+            this.tuple = tuple;
+            this.hash = Arrays.hashCode(tuple);
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return Arrays.equals(this.tuple, ((RecordWrapper) other).tuple);
+        }
+
+        @Override
+        public int hashCode() {
+            return hash;
+        }
+    }
 
     /**
      * The result of a check.
@@ -122,6 +160,8 @@ public class NodeChecker {
     /** Is a minimal class size required */
     private final boolean                         minimalClassSizeRequired;
 
+    private final DataManager                     manager;
+
     /**
      * Creates a new NodeChecker instance.
      * 
@@ -142,6 +182,7 @@ public class NodeChecker {
                        final SolutionSpace solutionSpace) {
         
         // Initialize all operators
+        this.manager = manager;
         this.metric = metric;
         this.config = config;
         this.dataGeneralized = manager.getDataGeneralized();
@@ -380,5 +421,160 @@ public class NodeChecker {
     public double getScore(Transformation transformation, Metric<?> metric, int k, int numRecords, int[] rootValues) {
         apply(transformation);
         return metric.getScore(transformation, currentGroupify, k, numRecords, rootValues);
+    }
+    
+    /**
+     * Calculates a score
+     * @param definition 
+     * @param transformation
+     * @param score
+     * @param clazz 
+     * @return
+     */
+    public double getScore(DataDefinition definition, Transformation transformation, ScoreType score, int clazz) {
+
+        // Apply transition and groupify
+        currentGroupify = transformer.apply(0L, transformation.getGeneralization(), currentGroupify);
+        currentGroupify.stateAnalyze(transformation, true);
+        currentGroupify.prepareScore();
+
+        double k = (double)config.getMinimalGroupSize();
+        double numRecords = (double)manager.getDataGeneralized().getDataLength();
+        double numAttrs = manager.getHierarchies().length;
+        int[] rootValues = new int[(int)numAttrs]; // TODO: This assumes that a single root node exists in all hierarchies
+        for (int i = 0; i < numAttrs; i++) {
+            int[] row = manager.getHierarchies()[i].getArray()[0];
+            rootValues[i] = row[row.length - 1];
+        }
+
+
+
+        switch (score) {
+        case AECS:
+            return currentGroupify.getNumberOfEquivalenceClasses();
+        case LOSS:
+            Metric<AbstractILMultiDimensional> metricMultiDim = Metric.createLossMetric(AggregateFunction.SUM);
+            metricMultiDim.initialize(manager,
+                                      definition,
+                                      manager.getDataGeneralized(),
+                                      manager.getHierarchies(),
+                                      config.getParent());
+            double[] lossAttrs = metricMultiDim.getInformationLoss(transformation, currentGroupify).getInformationLoss().getValues();
+            double loss = 0d;
+            for (int i = 0; i < numAttrs; i++) {
+                double min = numRecords / (double) manager.getHierarchies()[i].getArray().length;
+                double max = numRecords;
+                loss += lossAttrs[i] * (max - min) + min;
+            }
+            loss *= -1d / ((double) lossAttrs.length);
+            loss /= k + 1d;
+            return loss;
+        case PRECISION:
+            metricMultiDim = Metric.createPrecisionMetric(AggregateFunction.SUM);
+            metricMultiDim.initialize(manager,
+                                      definition,
+                                      manager.getDataGeneralized(),
+                                      manager.getHierarchies(),
+                                      config.getParent());
+            double[] precisionAttrs = metricMultiDim.getInformationLoss(transformation, currentGroupify).getInformationLoss().getValues();
+            double precision = 0d;
+            for (int i = 0; i < numAttrs; i++) {
+                precision += precisionAttrs[i];
+            }
+            return precision * -1d * numRecords / ((double) precisionAttrs.length * (k + 1d));
+        case DISCERNABILITY:
+            Metric<ILSingleDimensional> metricSingleDim = Metric.createDiscernabilityMetric();
+            metricSingleDim.initialize(manager,
+                                       definition,
+                                       manager.getDataGeneralized(),
+                                       manager.getHierarchies(),
+                                       config.getParent());
+            double sensitivity = (k == 1d) ? 5d : k * k / (k - 1d) + 1d;
+            double discernibilityVal = metricSingleDim.getInformationLoss(transformation, currentGroupify).getInformationLoss().getValue();
+            return -1d * discernibilityVal / (numRecords * sensitivity);
+        case ENTROPY:
+            double entropy = 0d;
+
+            for (int j = 0; j < numAttrs; ++j) {
+
+                Map<Integer, Integer> valueToCount = new HashMap<Integer, Integer>();
+
+                HashGroupifyEntry entry = currentGroupify.getFirstEquivalenceClass();
+                while (entry != null) {
+
+                    int count = entry.count;
+                    if (entry.isNotOutlier && entry.key[j] != rootValues[j]) {
+                        // The attribute value is not suppressed
+                        int value = entry.key[j];
+                        int valueCount = valueToCount.containsKey(value) ? (valueToCount.get(value) + count) : count;
+                        valueToCount.put(value, valueCount);
+                    } else {
+                        entropy -= numRecords * count;
+                    }
+
+                    // Next group
+                    entry = entry.nextOrdered;
+                }
+
+                for (int count : valueToCount.values()) {
+                    entropy -= count * count;
+                }
+            }
+
+            return entropy / ((k * k / (k - 1d) + 1d) * numAttrs * numRecords);
+
+        case CLASSIFICATION:
+            Map<RecordWrapper, Map<Integer, Integer>> featuresToClassToCount = new HashMap<>();
+
+            for (HashGroupifyEntry entry = currentGroupify.getFirstEquivalenceClass(); entry != null; entry = entry.nextOrdered) {
+
+                if (!entry.isNotOutlier) continue;
+
+                int[] record = entry.key;
+                int count = entry.count;
+                int classValue = record[clazz];
+
+                int[] features = new int[record.length - 1];
+                boolean featuresSuppressed = true;
+                for (int i = 0; i < record.length; i++) {
+                    if (i < clazz) {
+                        features[i] = record[i];
+                        if (record[i] != rootValues[i]) featuresSuppressed = false;
+                    } else if (i > clazz) {
+                        features[i - 1] = record[i];
+                        if (record[i] != rootValues[i]) featuresSuppressed = false;
+                    }
+                }
+
+                if (featuresSuppressed) continue;
+
+                RecordWrapper featuresWrapped = new RecordWrapper(features);
+
+                Map<Integer, Integer> classToCount = featuresToClassToCount.get(featuresWrapped);
+                if (classToCount == null) {
+                    classToCount = new HashMap<>();
+                    classToCount.put(classValue, count);
+                } else {
+                    int classCount = classToCount.containsKey(classValue) ? classToCount.get(classValue) + count : count;
+                    classToCount.put(classValue, classCount);
+                }
+                featuresToClassToCount.put(featuresWrapped, classToCount);
+            }
+
+            int unpenalizedCount = 0;
+            for (Map<Integer, Integer> classToCount : featuresToClassToCount.values()) {
+                int maxCount = 0;
+                for (int count : classToCount.values()) {
+                    maxCount = Math.max(maxCount, count);
+                }
+                unpenalizedCount += maxCount;
+            }
+
+            return (double) unpenalizedCount / k;
+
+        default:
+            // Return dummy data
+            return 0;
+        }
     }
 }
