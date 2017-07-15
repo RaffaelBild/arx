@@ -213,7 +213,11 @@ public class StateMachine {
      * @return true, if is possible snapshot
      */
     private boolean isPossibleSnapshot(final int[] currentNode) {
-        snapshot = history.get(currentNode);
+        try {
+            snapshot = history.get(currentNode);
+        } catch (Exception e) {
+            snapshot = null;
+        }
         snapshotNode = history.getTransformation();
         if (snapshot != null) { return true; }
         return false;
