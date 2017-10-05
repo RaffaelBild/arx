@@ -41,7 +41,19 @@ public class OrderedDistanceTCloseness extends TCloseness {
 
     /** The order of the elements. */
     private int[]             order;
+
+    /** The order of the elements. */
+    private int[]             orderNumber;
     
+    /** Partial distances of the original distribution. */
+    private double[]          baseDistances;
+    
+    /** Partial sums of the original distribution. */
+    private double[]          baseSums;
+
+    /** Minimal order number that must be present */
+    private int               minOrder;
+
     /**
      * Creates a new instance of the t-closeness criterion for ordered attributes as proposed in:
      * Li N, Li T, Venkatasubramanian S.
@@ -65,30 +77,63 @@ public class OrderedDistanceTCloseness extends TCloseness {
         super.initialize(manager, config);
         this.distribution = manager.getDistribution(attribute);
         this.order = manager.getOrder(attribute);
+        this.orderNumber = getOrderNumbers(order);
+        this.baseDistances = new double[order.length];
+        this.baseSums = new double[order.length];
+        
+        double threshold = t * (order.length - 1d);
+        double distance = 0d;
+        double sum_i = 0d;
+
+        // Find minimal order number that must be present and initialize base distances and sums
+        this.minOrder = order.length;
+        for (int orderNum = 0; orderNum < order.length; orderNum++) {
+            
+            // Compute summands and distances
+            int value = order[orderNum];
+            sum_i -= distribution[value];
+            distance += Math.abs(sum_i);
+            baseDistances[orderNum] = distance;
+            baseSums[orderNum] = sum_i;
+            
+            // Check
+            if (distance > threshold) {
+                this.minOrder = orderNum;
+                break;
+            }
+        }
     }
 
     @Override
     public boolean isAnonymous(Transformation node, HashGroupifyEntry entry) {
-
+        
         // Init
         int[] buckets = entry.distributions[index].getBuckets();
         double count = entry.count;
         
         // Prepare
+        int currentMinOrder = Integer.MAX_VALUE;
         IntDoubleOpenHashMap map = new IntDoubleOpenHashMap(buckets.length/2);
         for (int i = 0; i < buckets.length; i += 2) {
             if (buckets[i] != -1) { // bucket not empty
                 int value = buckets[i];
+                currentMinOrder = Math.min(currentMinOrder,  orderNumber[value]);
                 double frequency = ((double) buckets[i + 1] / count);
                 map.put(value, frequency);
             }
         }
+        
+        if (currentMinOrder > this.minOrder) {
+            // PRUNE
+            return false;
+        }
+        
         double threshold = t * (order.length - 1d);
-        double distance = 0d;
-        double sum_i = 0d;
+        double distance = currentMinOrder > 0 ? baseDistances[currentMinOrder - 1] : 0d;
+        double sum_i = currentMinOrder > 0 ? baseSums[currentMinOrder - 1] : 0d;
         
         // Calculate and check
-        for (int i=0; i<order.length; i++) {
+        for (int i = currentMinOrder; i < order.length; i++) {
             
             // Compute summands and distance
             int value = order[i];
@@ -122,5 +167,18 @@ public class OrderedDistanceTCloseness extends TCloseness {
     @Override
     public String toString() {
         return t+"-closeness with ordered distance for attribute '"+attribute+"'";
+    }
+
+    /**
+     * Maps values to order nums
+     * @param order
+     * @return
+     */
+    private int[] getOrderNumbers(int[] order) {
+        int[] result = new int[order.length];
+        for (int orderNum = 0; orderNum < order.length; orderNum++) {
+            result[order[orderNum]] = orderNum;
+        }
+        return result;
     }
 }
