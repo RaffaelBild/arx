@@ -221,11 +221,11 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
                     nonSuppressedValueToCount.put(value, valueCount);
                 } else {
                     // The attribute value has been suppressed because of record suppression or because of generalization
-                    score += entry.count * numRecords;
+                    score += (double)entry.count * (double)numRecords;
                 }
                 
                 // Add values for records which have been suppressed by sampling
-                score += (entry.pcount - entry.count) * numRecords;
+                score += (double)(entry.pcount - entry.count) * (double)numRecords;
 
                 // Next group
                 entry = entry.nextOrdered;
@@ -233,12 +233,12 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
 
             // Add values for all attribute values which were not suppressed
             for (int count : nonSuppressedValueToCount.values()) {
-                score += count * count;
+                score += (double)count * (double)count;
             }
         }
 
         // Adjust sensitivity and multiply with -1 so that higher values are better
-        score *= -1d / (numRecords * getDimensionsGeneralized());
-        return (k==1) ? score / 5d : score / (k * k / (k - 1d) + 1d);
+        score *= -1d / (numRecords * (double)getDimensionsGeneralized());
+        return (k==1) ? score / 5d : score / (double)(k * k / (k - 1d) + 1d);
     }
 }

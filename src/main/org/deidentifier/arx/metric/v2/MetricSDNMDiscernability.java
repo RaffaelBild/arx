@@ -156,16 +156,16 @@ public class MetricSDNMDiscernability extends AbstractMetricSingleDimensional {
         HashGroupifyEntry m = groupify.getFirstEquivalenceClass();
         while (m != null) {
             if (m.isNotOutlier) {
-                score += m.count * m.count;
+                score += (double)m.count * (double)m.count;
             } else {
-                score += m.count * numRecords;
+                score += (double)m.count * (double)numRecords;
             }
-            score += (m.pcount - m.count) * numRecords;
+            score += (double)(m.pcount - m.count) * (double)numRecords;
             m = m.nextOrdered;
         }
         
         // Adjust sensitivity and multiply with -1 so that higher values are better
-        return -1d * score / (numRecords * ((k == 1d) ? 5d : k * k / (k - 1d) + 1d));
+        return -1d * score / ((double)numRecords * ((k == 1d) ? 5d : k * k / (k - 1d) + 1d));
     }
 }
 
