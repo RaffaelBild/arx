@@ -27,7 +27,6 @@ import org.deidentifier.arx.DataGeneralizationScheme.GeneralizationDegree;
 import org.deidentifier.arx.criteria.DataDependentEDDifferentialPrivacy;
 import org.deidentifier.arx.criteria.EDDifferentialPrivacy;
 import org.deidentifier.arx.metric.Metric;
-import org.deidentifier.arx.test.AbstractAnonymizationTest.ARXAnonymizationTestCase;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -88,6 +87,15 @@ public class TestAnonymizationDifferentialPrivacy extends AbstractAnonymizationT
                                               /* 30 */ { new ARXAnonymizationTestCase(ARXConfiguration.create(1d, Metric.createPrecisionMetric()).addPrivacyModel(new DataDependentEDDifferentialPrivacy(1d, 1d, 1E-5d, 10, true)), "./data/fars.csv", 0.4932167503136763, new int[] { 5, 1, 3, 1, 0, 0, 3, 0 }, false) },
                                               { new ARXAnonymizationTestCase(ARXConfiguration.create(1d, Metric.createDiscernabilityMetric()).addPrivacyModel(new DataDependentEDDifferentialPrivacy(1d, 1d, 1E-5d, 10, true)), "./data/fars.csv", 1.05262522E8, new int[] { 3, 2, 3, 3, 0, 2, 2, 1 }, false) },
                                               { new ARXAnonymizationTestCase(ARXConfiguration.create(1d, Metric.createEntropyMetric()).addPrivacyModel(new DataDependentEDDifferentialPrivacy(1d, 1d, 1E-5d, 10, true)), "./data/fars.csv", 934178.4934332913, new int[] { 4, 0, 2, 2, 0, 1, 2, 1 }, false) },
+                                              { new ARXAnonymizationTestCase(ARXConfiguration.create(1d, Metric.createClassificationMetric(8, 30163)).addPrivacyModel(new DataDependentEDDifferentialPrivacy(1d, 1d, 1E-5d, 1, true)), "./data/adult.csv", 0.5240858004840367, new int[] { 1, 4, 0, 2, 3, 2, 2, 2, 0 }, false, "salary-class") },
+                                              { new ARXAnonymizationTestCase(ARXConfiguration.create(1d, Metric.createClassificationMetric(2, 63441)).addPrivacyModel(new DataDependentEDDifferentialPrivacy(1d, 1d, 1E-5d, 1, true)), "./data/cup.csv", 0.6544190665342602, new int[] { 5, 4, 0, 1, 1, 4, 4, 4 }, false, "GENDER") },
+                                              { new ARXAnonymizationTestCase(ARXConfiguration.create(1d, Metric.createClassificationMetric(5, 100937)).addPrivacyModel(new DataDependentEDDifferentialPrivacy(1d, 1d, 1E-5d, 1, true)), "./data/fars.csv", 0.43821393542506715, new int[] { 5, 2, 3, 3, 1, 0, 3, 1 }, false, "ihispanic") },
+                                              { new ARXAnonymizationTestCase(ARXConfiguration.create(1d, Metric.createClassificationMetric(8, 30163)).addPrivacyModel(new DataDependentEDDifferentialPrivacy(1d, 1d, 1E-5d, 10, true)), "./data/adult.csv", 0.5118191161356629, new int[] { 0, 3, 1, 2, 2, 2, 2, 2, 0 }, false, "salary-class") },
+                                              { new ARXAnonymizationTestCase(ARXConfiguration.create(1d, Metric.createClassificationMetric(2, 63441)).addPrivacyModel(new DataDependentEDDifferentialPrivacy(1d, 1d, 1E-5d, 10, true)), "./data/cup.csv", 0.6509985655963809, new int[] { 5, 3, 0, 0, 1, 4, 4, 4 }, false, "GENDER") },
+                                              { new ARXAnonymizationTestCase(ARXConfiguration.create(1d, Metric.createClassificationMetric(5, 100937)).addPrivacyModel(new DataDependentEDDifferentialPrivacy(1d, 1d, 1E-5d, 10, true)), "./data/fars.csv", 0.410820610876091, new int[] { 5, 1, 3, 3, 1, 0, 3, 1 }, false, "ihispanic") },
+                                              { new ARXAnonymizationTestCase(ARXConfiguration.create(1d, Metric.createClassificationMetric(8, 30163)).addPrivacyModel(new DataDependentEDDifferentialPrivacy(1d, 1d, 1E-5d, 100, true)), "./data/adult.csv", 0.5118191161356629, new int[] { 0, 3, 1, 2, 2, 2, 2, 2, 0 }, false, "salary-class") },
+                                              { new ARXAnonymizationTestCase(ARXConfiguration.create(1d, Metric.createClassificationMetric(2, 63441)).addPrivacyModel(new DataDependentEDDifferentialPrivacy(1d, 1d, 1E-5d, 100, true)), "./data/cup.csv", 0.6540722876373323, new int[] { 5, 3, 0, 1, 1, 3, 2, 3 }, false, "GENDER") },
+                                              { new ARXAnonymizationTestCase(ARXConfiguration.create(1d, Metric.createClassificationMetric(5, 100937)).addPrivacyModel(new DataDependentEDDifferentialPrivacy(1d, 1d, 1E-5d, 100, true)), "./data/fars.csv", 0.4141989557843011, new int[] { 5, 0, 2, 2, 1, 0, 3, 2 }, false, "ihispanic") },
         });
     }
     
