@@ -346,7 +346,7 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
         // For every attribute
         for (int j = 0; j < getDimensionsGeneralized(); ++j) {
 
-            Map<Integer, Integer> nonSuppressedValueToCount = new HashMap<Integer, Integer>();
+            Map<Double, Double> nonSuppressedValueToCount = new HashMap<Double, Double>();
 
             HashGroupifyEntry entry = groupify.getFirstEquivalenceClass();
             while (entry != null) {
@@ -354,24 +354,24 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
                 // Process values of records which have not been suppressed by sampling
                 if (entry.isNotOutlier && entry.key[j] != rootValues[j]) {
                     // The attribute value has neither been suppressed because of record suppression nor because of generalization
-                    int value = entry.key[j];
-                    int valueCount = nonSuppressedValueToCount.containsKey(value) ?
-                            (nonSuppressedValueToCount.get(value) + entry.count) : entry.count;
+                    double value = (double)entry.key[j];
+                    double valueCount = nonSuppressedValueToCount.containsKey(value) ?
+                            (nonSuppressedValueToCount.get(value) + (double)entry.count) : (double)entry.count;
                     nonSuppressedValueToCount.put(value, valueCount);
                 } else {
                     // The attribute value has been suppressed because of record suppression or because of generalization
-                    score += entry.count * numRecords;
+                    score += (double)entry.count * (double)numRecords;
                 }
                 
                 // Add values for records which have been suppressed by sampling
-                score += (entry.pcount - entry.count) * numRecords;
+                score += ((double)entry.pcount - (double)entry.count) * (double)numRecords;
 
                 // Next group
                 entry = entry.nextOrdered;
             }
 
             // Add values for all attribute values which were not suppressed
-            for (int count : nonSuppressedValueToCount.values()) {
+            for (double count : nonSuppressedValueToCount.values()) {
                 score += count * count;
             }
         }
