@@ -87,6 +87,9 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
 
     /** The root values of all generalization hierarchies or -1 if no single root value exists */
     private int[]         rootValues;
+    
+    /** The highest levels of all generalization hierarchies */
+    private int[]         maxLevels;
 
 
     /**
@@ -257,7 +260,7 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
 
             // Check for cached value
             final int transformation = node.getGeneralization()[column];
-            if (transformation == rootValues[column]) {
+            if (transformation == maxLevels[column]) {
             	// The column is suppressed by generalization
             	continue;
             }
@@ -406,7 +409,9 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
             
             // Store root values of generalization hierarchies or null if no single root value exists
             rootValues = new int[hierarchies.length];
+            maxLevels = new int[hierarchies.length];
             for (int i = 0; i < hierarchies.length; i++) {
+                maxLevels[i] = hierarchies[i].getHeight()-1;
                 int rootValue = -1;
                 for (int[] row : hierarchies[i].getArray()) {
                     if (rootValue == -1) {
