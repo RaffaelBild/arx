@@ -257,6 +257,10 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
 
             // Check for cached value
             final int transformation = node.getGeneralization()[column];
+            if (transformation == rootValues[column]) {
+            	// The column is suppressed by generalization
+            	continue;
+            }
             double value = cache[column][transformation];
             if (value == NOT_AVAILABLE) {
                 value = 0d;

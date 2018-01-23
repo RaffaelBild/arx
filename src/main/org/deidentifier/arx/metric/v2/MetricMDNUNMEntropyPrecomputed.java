@@ -110,7 +110,7 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
         double sFactor = super.getSuppressionFactor();
         
         // Compute non-uniform entropy
-        double[] result = super.getInformationLossInternalRaw(node, g);
+        double[] result = super.getInformationLossInternalRaw(node, g); // The information loss of all non-suppressed cells
         double[] bound = new double[result.length];
         System.arraycopy(result, 0, bound, 0, result.length);
         
