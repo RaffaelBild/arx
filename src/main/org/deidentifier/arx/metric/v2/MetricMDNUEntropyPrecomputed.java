@@ -86,7 +86,7 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
     private double        k;
 
     /** The root values of all generalization hierarchies or -1 if no single root value exists */
-    private int[]         rootValues;
+    protected int[]       rootValues;
     
     /** The highest levels of all generalization hierarchies */
     private int[]         maxLevels;

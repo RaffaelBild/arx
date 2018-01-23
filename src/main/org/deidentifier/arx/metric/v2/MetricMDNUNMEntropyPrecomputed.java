@@ -115,37 +115,40 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
         System.arraycopy(result, 0, bound, 0, result.length);
         
         // Compute loss induced by suppression
-        double suppressed = 0;
+        int[] numSuppressed = new int[node.getGeneralization().length];
         final IntIntOpenHashMap[] original = new IntIntOpenHashMap[node.getGeneralization().length];
         for (int i = 0; i < original.length; i++) {
             original[i] = new IntIntOpenHashMap();
         }
-
+        
         // Compute counts for suppressed values in each column 
-        // m.count only counts tuples from the research subset
         HashGroupifyEntry m = g.getFirstEquivalenceClass();
         while (m != null) {
-            if (!m.isNotOutlier && m.count > 0) {
-                suppressed += m.count;
-                m.read();
-                for (int i = 0; i < original.length; i++) {
-                    original[i].putOrAdd(m.next(), m.count, m.count);
+            m.read();
+            for (int dimension=0; dimension<node.getGeneralization().length; dimension++) {
+                int value = m.next();
+                if (!m.isNotOutlier || (rootValues[dimension] != -1 && value == rootValues[dimension])) {
+                    // The attribute value has been suppressed because of record suppression or because of generalization
+                    numSuppressed[dimension] += m.count;
+                    original[dimension].putOrAdd(value, m.count, m.count);
                 }
+                // Add values for records which have been suppressed by sampling
+                int nummSuppressedBySampling = m.pcount - m.count;
+                numSuppressed[dimension] += nummSuppressedBySampling;
+                original[dimension].putOrAdd(value, nummSuppressedBySampling, nummSuppressedBySampling);
             }
             m = m.nextOrdered;
         }
 
-        // Evaluate non-uniform entropy for suppressed tuples
-        if (suppressed != 0){
-            for (int i = 0; i < original.length; i++) {
-                IntIntOpenHashMap map = original[i];
-                for (int j = 0; j < map.allocated.length; j++) {
-                    if (map.allocated[j]) {
-                        double count = map.values[j];
-                        result[i] += count * log2(count / suppressed) * sFactor;
-                    }
-                }
-            }
+        // Evaluate non-uniform entropy for suppressed values
+        for (int i = 0; i < original.length; i++) {
+        	IntIntOpenHashMap map = original[i];
+        	for (int j = 0; j < map.allocated.length; j++) {
+        		if (map.allocated[j]) {
+        			double count = map.values[j];
+        			result[i] += count * log2(count / numSuppressed[i]) * sFactor;
+        		}
+        	}
         }
         
         // Switch sign bit and round
