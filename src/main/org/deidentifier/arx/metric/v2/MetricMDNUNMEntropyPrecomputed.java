@@ -146,7 +146,7 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
         	for (int j = 0; j < map.allocated.length; j++) {
         		if (map.allocated[j]) {
         			double count = map.values[j];
-        			result[i] += count * log2(count / numSuppressed[i]) * sFactor;
+        			result[i] += count * log2((double)count / (double)numSuppressed[i]) * sFactor;
         		}
         	}
         }
