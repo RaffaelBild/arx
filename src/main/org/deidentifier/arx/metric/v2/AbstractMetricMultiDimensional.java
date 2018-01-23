@@ -226,6 +226,15 @@ public abstract class AbstractMetricMultiDimensional extends Metric<AbstractILMu
     protected int getDimensionsGeneralized() {
         return dimensionsGeneralized;
     }
+    
+    /**
+     * Returns the maximal information loss.
+     *
+     * @return
+     */
+    protected double[] getMax() {
+        return this.max;
+    }
 
     /**
      * For backwards compatibility only.

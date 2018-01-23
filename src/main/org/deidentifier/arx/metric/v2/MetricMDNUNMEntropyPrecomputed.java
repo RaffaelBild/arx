@@ -26,6 +26,8 @@ import org.deidentifier.arx.framework.check.groupify.HashGroupify;
 import org.deidentifier.arx.framework.check.groupify.HashGroupifyEntry;
 import org.deidentifier.arx.framework.data.Data;
 import org.deidentifier.arx.framework.data.DataManager;
+import org.deidentifier.arx.framework.data.DataMatrix;
+import org.deidentifier.arx.framework.data.Dictionary;
 import org.deidentifier.arx.framework.data.GeneralizationHierarchy;
 import org.deidentifier.arx.framework.lattice.Transformation;
 import org.deidentifier.arx.metric.MetricConfiguration;
@@ -154,6 +156,18 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
         // Switch sign bit and round
         for (int column = 0; column < result.length; column++) {
             result[column] = round(result[column] == 0.0d ? result[column] : -result[column]);
+            bound[column] = round(bound[column] == 0.0d ? bound[column] : -bound[column]);
+        }
+        
+        // Normalize
+        double[] max = super.getMax();
+        double maxSum = 0d;
+        for (int i = 0; i < max.length; i++) {
+        	maxSum += max[i];
+        }
+        for (int i = 0; i < max.length; i++) {
+        	result[i] = (max[i] - result[i]) / maxSum;
+        	bound[i] = (max[i] - bound[i]) / maxSum;
         }
 
         // Return
@@ -182,19 +196,56 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
         super.initializeInternal(manager, definition, input, hierarchies, config);
 
         // Prepare
-        double gFactor = super.getGeneralizationFactor();
         double sFactor = super.getSuppressionFactor();
         
         // Compute a reasonable minimum & maximum
         double[] min = new double[hierarchies.length];
         Arrays.fill(min, 0d);
         
-        double[] max = new double[hierarchies.length];
-        for (int i=0; i<max.length; i++) {
-            max[i] = (2d * input.getDataLength() * log2(input.getDataLength())) * Math.max(gFactor, sFactor);
-        }
+        double[] max = getMaxInformationLoss(input, sFactor);
         
         super.setMax(max);
         super.setMin(min);
+    }
+    
+    /**
+     * Returns the maximal information loss
+     * @param data
+     * @param sFactor
+     * @return
+     */
+    private double[] getMaxInformationLoss(final Data data, final double sFactor) {
+    	DataMatrix array = data.getArray();
+    	Dictionary dictionary = data.getDictionary();
+
+    	// Initialize counts
+    	int counts[][] = new int[array.getNumColumns()][];
+    	for (int i = 0; i < counts.length; i++) {
+    		counts[i] = new int[dictionary.getMapping()[i].length];
+    	}
+
+    	// Compute counts
+    	for (int i = 0; i < array.getNumRows(); i++) { 
+    		array.setRow(i);
+    		for (int column = 0; column < array.getNumColumns(); column++) {
+    			counts[column][array.getValueAtColumn(column)]++;
+    		}
+    	}
+    	
+    	// Compute maximal information loss
+    	double[] max = new double[array.getNumColumns()];
+    	for (int i = 0; i < counts.length; i++) {
+    		for (int v = 0; v < counts[i].length; v++) {
+    			int count = counts[i][v];
+    			max[i] += count * log2((double)count / (double)array.getNumRows()) * sFactor;
+    		}
+    	}
+    	
+    	// Switch sign bit and round
+        for (int column = 0; column < max.length; column++) {
+        	max[column] = round(max[column] == 0.0d ? max[column] : -max[column]);
+        }
+    	
+    	return max;
     }
 }
