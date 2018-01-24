@@ -237,7 +237,9 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
     	for (int i = 0; i < counts.length; i++) {
     		for (int v = 0; v < counts[i].length; v++) {
     			int count = counts[i][v];
-    			max[i] += count * log2((double)count / (double)array.getNumRows()) * sFactor;
+    			if (count != 0) {
+    				max[i] += count * log2((double)count / (double)array.getNumRows()) * sFactor;
+    			}
     		}
     	}
     	
