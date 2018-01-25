@@ -65,7 +65,7 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
     protected MetricMDNUNMEntropyPrecomputed(double gsFactor, AggregateFunction function){
         super(true, false, false, gsFactor, function);
     }
-    
+
     /**
      * Returns the configuration of this metric.
      *
@@ -107,22 +107,22 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
 
     @Override
     protected ILMultiDimensionalWithBound getInformationLossInternal(final Transformation node, final HashGroupify g) {
-        
+
         // Prepare
         double sFactor = super.getSuppressionFactor();
-        
+
         // Compute non-uniform entropy
         double[] result = super.getInformationLossInternalRaw(node, g); // The information loss of all non-suppressed cells
         double[] bound = new double[result.length];
         System.arraycopy(result, 0, bound, 0, result.length);
-        
+
         // Compute loss induced by suppression
         int[] numSuppressed = new int[node.getGeneralization().length];
         final IntIntOpenHashMap[] original = new IntIntOpenHashMap[node.getGeneralization().length];
         for (int i = 0; i < original.length; i++) {
             original[i] = new IntIntOpenHashMap();
         }
-        
+
         // Compute counts for suppressed values in each column 
         HashGroupifyEntry m = g.getFirstEquivalenceClass();
         while (m != null) {
@@ -144,30 +144,30 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
 
         // Evaluate non-uniform entropy for suppressed values
         for (int i = 0; i < original.length; i++) {
-        	IntIntOpenHashMap map = original[i];
-        	for (int j = 0; j < map.allocated.length; j++) {
-        		if (map.allocated[j]) {
-        			double count = map.values[j];
-        			result[i] += count * log2((double)count / (double)numSuppressed[i]) * sFactor;
-        		}
-        	}
+            IntIntOpenHashMap map = original[i];
+            for (int j = 0; j < map.allocated.length; j++) {
+                if (map.allocated[j]) {
+                    double count = map.values[j];
+                    result[i] += count * log2((double)count / (double)numSuppressed[i]) * sFactor;
+                }
+            }
         }
-        
+
         // Switch sign bit and round
         for (int column = 0; column < result.length; column++) {
             result[column] = round(result[column] == 0.0d ? result[column] : -result[column]);
             bound[column] = round(bound[column] == 0.0d ? bound[column] : -bound[column]);
         }
-        
+
         // Normalize
         double[] max = super.getMax();
         double maxSum = 0d;
         for (int i = 0; i < max.length; i++) {
-        	maxSum += max[i];
+            maxSum += max[i];
         }
         for (int i = 0; i < max.length; i++) {
-        	result[i] = (max[i] - result[i]) / maxSum;
-        	bound[i] = (max[i] - bound[i]) / maxSum;
+            result[i] = (max[i] - result[i]) / maxSum;
+            bound[i] = (max[i] - bound[i]) / maxSum;
         }
 
         // Return
@@ -182,7 +182,7 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
 
     @Override
     protected AbstractILMultiDimensional getLowerBoundInternal(Transformation node,
-                                                       HashGroupify groupify) {
+                                                               HashGroupify groupify) {
         return super.getInformationLossInternal(node, (HashGroupify)null).getLowerBound();
     }
 
@@ -192,22 +192,22 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
                                       final Data input, 
                                       final GeneralizationHierarchy[] hierarchies, 
                                       final ARXConfiguration config) {
-        
+
         super.initializeInternal(manager, definition, input, hierarchies, config);
 
         // Prepare
         double sFactor = super.getSuppressionFactor();
-        
+
         // Compute a reasonable minimum & maximum
         double[] min = new double[hierarchies.length];
         Arrays.fill(min, 0d);
-        
+
         double[] max = getMaxInformationLoss(input, sFactor);
-        
+
         super.setMax(max);
         super.setMin(min);
     }
-    
+
     /**
      * Returns the maximal information loss
      * @param data
@@ -215,39 +215,39 @@ public class MetricMDNUNMEntropyPrecomputed extends MetricMDNUEntropyPrecomputed
      * @return
      */
     private double[] getMaxInformationLoss(final Data data, final double sFactor) {
-    	DataMatrix array = data.getArray();
-    	Dictionary dictionary = data.getDictionary();
+        DataMatrix array = data.getArray();
+        Dictionary dictionary = data.getDictionary();
 
-    	// Initialize counts
-    	int counts[][] = new int[array.getNumColumns()][];
-    	for (int i = 0; i < counts.length; i++) {
-    		counts[i] = new int[dictionary.getMapping()[i].length];
-    	}
-
-    	// Compute counts
-    	for (int i = 0; i < array.getNumRows(); i++) { 
-    		array.setRow(i);
-    		for (int column = 0; column < array.getNumColumns(); column++) {
-    			counts[column][array.getValueAtColumn(column)]++;
-    		}
-    	}
-    	
-    	// Compute maximal information loss
-    	double[] max = new double[array.getNumColumns()];
-    	for (int i = 0; i < counts.length; i++) {
-    		for (int v = 0; v < counts[i].length; v++) {
-    			int count = counts[i][v];
-    			if (count != 0) {
-    				max[i] += count * log2((double)count / (double)array.getNumRows()) * sFactor;
-    			}
-    		}
-    	}
-    	
-    	// Switch sign bit and round
-        for (int column = 0; column < max.length; column++) {
-        	max[column] = round(max[column] == 0.0d ? max[column] : -max[column]);
+        // Initialize counts
+        int counts[][] = new int[array.getNumColumns()][];
+        for (int i = 0; i < counts.length; i++) {
+            counts[i] = new int[dictionary.getMapping()[i].length];
         }
-    	
-    	return max;
+
+        // Compute counts
+        for (int i = 0; i < array.getNumRows(); i++) { 
+            array.setRow(i);
+            for (int column = 0; column < array.getNumColumns(); column++) {
+                counts[column][array.getValueAtColumn(column)]++;
+            }
+        }
+
+        // Compute maximal information loss
+        double[] max = new double[array.getNumColumns()];
+        for (int i = 0; i < counts.length; i++) {
+            for (int v = 0; v < counts[i].length; v++) {
+                int count = counts[i][v];
+                if (count != 0) {
+                    max[i] += count * log2((double)count / (double)array.getNumRows()) * sFactor;
+                }
+            }
+        }
+
+        // Switch sign bit and round
+        for (int column = 0; column < max.length; column++) {
+            max[column] = round(max[column] == 0.0d ? max[column] : -max[column]);
+        }
+
+        return max;
     }
 }
