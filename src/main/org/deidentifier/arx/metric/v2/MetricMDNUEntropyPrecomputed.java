@@ -164,7 +164,6 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
                  value += a * a / b;
                }               
             }
-           result[column] = value * gFactor;
         }
         double score = 0d;
         for(int i = 0; i<result.length; i++) {
@@ -286,11 +285,6 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
         for (int column = 0; column < hierarchies.length; column++) {
 
             final int transformation = node.getGeneralization()[column];
-            if (transformation == maxLevels[column]) {
-                // The column is suppressed by generalization
-                continue;
-            }
-            // Check for cached value
             double value = cache[column][transformation];
             if (value == NOT_AVAILABLE) {
                 value = 0d;
