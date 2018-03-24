@@ -142,48 +142,81 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
     
     @Override
     public ILScoreDouble getScore(final Transformation node, final HashGroupify groupify) {
-
+   //JK new calculation 
         // Prepare
-        int dimensionsGeneralized = getDimensionsGeneralized();
-        IntIntOpenHashMap[] nonSuppressedValueToCount = new IntIntOpenHashMap[dimensionsGeneralized];
-        for (int dimension=0; dimension<dimensionsGeneralized; dimension++) {
-            nonSuppressedValueToCount[dimension] = new IntIntOpenHashMap();
+        int[][][] cardinalities = this.cardinalities.getCardinalities();
+        double[] result = new double[hierarchies.length];
+        double gFactor = super.getGeneralizationFactor();
+
+        // For each column column  /JK  column = attribute of dataset
+        for (int column = 0; column < hierarchies.length; column++) {
+
+        	final int transformation = node.getGeneralization()[column];
+        	
+            if (transformation == maxLevels[column]) { //JK attribute is suppressed completely?
+                // The column is suppressed by generalization
+                continue;            
+            }
+            
+            double value = 0d;
+            final int[][] cardinality = cardinalities[column];
+            final int[][] hierarchy = hierarchies[column];
+            
+            for (int in = 0; in < hierarchy.length; in++) {
+               final int out = hierarchy[in][transformation];
+               final double a = cardinality[in][0];
+               final double b = cardinality[out][transformation];
+               if (a != 0d) {
+                 value += a / b;
+               }               
+            }
+           result[column] = value * gFactor;
+        }
+        double score = 0d;
+        for(int i = 0; i<result.length; i++) {
+        	score += result[i];
+        } 
+        //JK all non suppressed attributes checked
+        
+        // Compute loss induced by suppression
+        int[] numSuppressed = new int[node.getGeneralization().length]; //JK saves number of suppressed values for each column?
+        final IntIntOpenHashMap[] original = new IntIntOpenHashMap[node.getGeneralization().length];
+        for (int i = 0; i < original.length; i++) {
+            original[i] = new IntIntOpenHashMap();
         }
 
-        // Compute score
-        double score = 0d;
+        // Compute counts for suppressed values in each column 
         HashGroupifyEntry m = groupify.getFirstEquivalenceClass();
         while (m != null) {
             m.read();
-            for (int dimension=0; dimension<dimensionsGeneralized; dimension++) {
+            for (int dimension=0; dimension<node.getGeneralization().length; dimension++) {
                 int value = m.next();
-                // Process values of records which have not been suppressed by sampling
-                if (m.isNotOutlier && (rootValues[dimension] == -1 || value != rootValues[dimension])) {
-                    // The attribute value has neither been suppressed because of record suppression nor because of generalization
-                    nonSuppressedValueToCount[dimension].putOrAdd(value, m.count, m.count);
-                } else {
+                if (!m.isNotOutlier || (rootValues[dimension] != -1 && value == rootValues[dimension])) {
                     // The attribute value has been suppressed because of record suppression or because of generalization
-                    score += (double)m.count * (double)rows;
+                    numSuppressed[dimension] += m.count;
+                    original[dimension].putOrAdd(value, m.count, m.count);
                 }
                 // Add values for records which have been suppressed by sampling
-                score += (double)(m.pcount - m.count) * (double)rows;
+                int nummSuppressedBySampling = m.pcount - m.count;
+                numSuppressed[dimension] += nummSuppressedBySampling;
+                original[dimension].putOrAdd(value, nummSuppressedBySampling, nummSuppressedBySampling);
             }
             m = m.nextOrdered;
         }
-        // Add values for all attribute values which were not suppressed
-        for (int dimension=0; dimension<dimensionsGeneralized; dimension++) {
-            final boolean [] states = nonSuppressedValueToCount[dimension].allocated;
-            final int [] counts = nonSuppressedValueToCount[dimension].values;
-            for (int i=0; i<states.length; i++) {
-                if (states[i]) {
-                    score += (double)counts[i] * (double)counts[i];
+
+        // Calculate and add score for suppressed values
+        for (int i = 0; i < original.length; i++) {
+            IntIntOpenHashMap map = original[i];
+            for (int j = 0; j < map.allocated.length; j++) {
+                if (map.allocated[j]) {
+                    double count = map.values[j];
+                    score += count * ((double)count / (double)numSuppressed[i]);
                 }
             }
         }
-
         // Adjust sensitivity and multiply with -1 so that higher values are better
-        score *= -1d / ((double)rows * (double)dimensionsGeneralized);
-        score /= (k==1) ? 5d : (double)(k * k / (k - 1d) + 1d);
+        //score *= -1d / ((double)rows * (double)dimensionsGeneralized); //JK  "-1d" remove, because log is no longer part of score function?
+        score /= (k==1) ? 3d : (double)(3*k - 2d); //JK sensitivity updated 
         
         // Return
         return new ILScoreDouble(score);
@@ -274,7 +307,7 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
                     final double a = cardinality[in][0];
                     final double b = cardinality[out][transformation];
                     if (a != 0d) {
-                        value += a * log2(a / b);
+                        value += a * log2(a / b); 
                     }
                 }
                 cache[column][transformation] = value;
