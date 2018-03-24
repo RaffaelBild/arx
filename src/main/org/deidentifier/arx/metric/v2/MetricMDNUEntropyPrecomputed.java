@@ -146,7 +146,6 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
         // Prepare
         int[][][] cardinalities = this.cardinalities.getCardinalities();
         double[] result = new double[hierarchies.length];
-        double gFactor = super.getGeneralizationFactor();
 
         // For each column column  /JK  column = attribute of dataset
         for (int column = 0; column < hierarchies.length; column++) {
@@ -164,6 +163,7 @@ public class MetricMDNUEntropyPrecomputed extends AbstractMetricMultiDimensional
                  value += a * a / b;
                }               
             }
+           result[column] = value;
         }
         double score = 0d;
         for(int i = 0; i<result.length; i++) {
