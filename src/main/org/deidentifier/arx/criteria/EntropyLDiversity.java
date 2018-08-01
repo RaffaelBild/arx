@@ -285,18 +285,14 @@ public class EntropyLDiversity extends LDiversity {
     
     @Override
     public boolean isReliableAnonymizationSupported() {
-        return true;
+        // Currently, reliable anonymization is only implemented for the Shannon estimator
+        return this.estimator == EntropyEstimator.SHANNON;
     }
     
     @Override
     public boolean isReliablyAnonymous(Transformation node, HashGroupifyEntry entry) {
 
         try {
-            // Check
-            if (this.estimator != EntropyEstimator.SHANNON) {
-                throw new RuntimeException("Reliable version of the entropy-l-diversity model is currently only supported for the Shannon entropy estimator");
-            }
-            
             Distribution d = entry.distributions[index];
 
             // If less than l values are present skip
