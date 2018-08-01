@@ -24,6 +24,9 @@ import org.deidentifier.arx.certificate.elements.ElementData;
 import org.deidentifier.arx.framework.check.distribution.Distribution;
 import org.deidentifier.arx.framework.check.groupify.HashGroupifyEntry;
 import org.deidentifier.arx.framework.lattice.Transformation;
+import org.deidentifier.arx.reliability.IntervalArithmeticDouble;
+import org.deidentifier.arx.reliability.IntervalArithmeticException;
+import org.deidentifier.arx.reliability.IntervalDouble;
 
 /**
  * The entropy l-diversity privacy model.
@@ -278,6 +281,54 @@ public class EntropyLDiversity extends LDiversity {
     @Override
     public boolean isLocalRecodingSupported() {
         return true;
+    }
+    
+    @Override
+    public boolean isReliableAnonymizationSupported() {
+        return true;
+    }
+    
+    @Override
+    public boolean isReliablyAnonymous(Transformation node, HashGroupifyEntry entry) {
+
+        try {
+            // Check
+            if (this.estimator != EntropyEstimator.SHANNON) {
+                throw new RuntimeException("Reliable version of the entropy-l-diversity model is currently only supported for the Shannon entropy estimator");
+            }
+            
+            Distribution d = entry.distributions[index];
+
+            // If less than l values are present skip
+            if (d.size() < minSize) { return false; }
+            
+            IntervalArithmeticDouble ia = new IntervalArithmeticDouble();
+
+            // Sum of the frequencies in distribution (=number of elements)
+            IntervalDouble total = ia.createInterval(entry.count);
+            // Sum must stay smaller than this constant term
+            IntervalDouble C = ia.mult(total, ia.sub(ia.log(total), ia.log(ia.createInterval(l))));
+            IntervalDouble sum1 = ia.createInterval(0);
+
+            final int[] buckets = d.getBuckets();
+            for (int i = 0; i < buckets.length; i += 2) {
+                if (buckets[i] != -1) { // bucket not empty
+                    IntervalDouble frequency = ia.createInterval(buckets[i + 1]);
+                    sum1 = ia.add(sum1, ia.mult(frequency, ia.log(frequency)));
+                    // If the sum grows over C, we can abort the loop earlier.
+                    if(!ia.lessThanOrEqual(sum1, C)) { return false; }
+                }
+            }
+
+            // If we reach this point, the loop did not return false.
+            return true;
+            
+        // Check for arithmetic issues
+        } catch (IntervalArithmeticException | ArithmeticException | IndexOutOfBoundsException e) {
+            // Unable to determine reliably if the equivalence class satisfies the privacy model.
+            // Return false, assuming conservatively that it does not.
+            return false;
+        }
     }
     
     @Override
