@@ -1,6 +1,6 @@
 /*
  * ARX: Powerful Data Anonymization
- * Copyright 2012 - 2017 Fabian Prasser, Florian Kohlmayer and contributors
+ * Copyright 2012 - 2018 Fabian Prasser and contributors
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,16 @@ import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.math3.util.Pair;
+import org.deidentifier.arx.ARXClassificationConfiguration;
 import org.deidentifier.arx.Data;
 import org.deidentifier.arx.DataHandle;
 import org.deidentifier.arx.DataType;
@@ -36,6 +40,7 @@ import org.deidentifier.arx.DataType.DataTypeDescription;
 import org.deidentifier.arx.gui.Controller;
 import org.deidentifier.arx.gui.model.Model;
 import org.deidentifier.arx.gui.model.Model.Perspective;
+import org.deidentifier.arx.gui.model.ModelAnonymizationConfiguration;
 import org.deidentifier.arx.gui.model.ModelAuditTrailEntry;
 import org.deidentifier.arx.gui.model.ModelCriterion;
 import org.deidentifier.arx.gui.model.ModelEvent;
@@ -44,12 +49,17 @@ import org.deidentifier.arx.gui.model.ModelExplicitCriterion;
 import org.deidentifier.arx.gui.resources.Charsets;
 import org.deidentifier.arx.gui.resources.Resources;
 import org.deidentifier.arx.gui.view.SWTUtil;
+import org.deidentifier.arx.gui.view.def.IValidator;
 import org.deidentifier.arx.gui.view.def.IView;
+import org.deidentifier.arx.gui.view.impl.attributes.LayoutAttributes;
 import org.deidentifier.arx.gui.view.impl.common.ComponentTitledFolder;
 import org.deidentifier.arx.gui.view.impl.define.LayoutDefinition;
 import org.deidentifier.arx.gui.view.impl.explore.LayoutExplore;
 import org.deidentifier.arx.gui.view.impl.menu.DialogAbout;
+import org.deidentifier.arx.gui.view.impl.menu.DialogAnonymization;
 import org.deidentifier.arx.gui.view.impl.menu.DialogAuditTrail;
+import org.deidentifier.arx.gui.view.impl.menu.DialogClassificationConfiguration;
+import org.deidentifier.arx.gui.view.impl.menu.DialogComboDoubleSelection;
 import org.deidentifier.arx.gui.view.impl.menu.DialogComboSelection;
 import org.deidentifier.arx.gui.view.impl.menu.DialogCriterionSelection;
 import org.deidentifier.arx.gui.view.impl.menu.DialogCriterionUpdate;
@@ -166,6 +176,9 @@ public class MainWindow implements IView {
         Composite item4 = root.createItem(Resources.getMessage("MainWindow.4"), controller.getResources().getManagedImage("perspective_risk.png")); //$NON-NLS-1$ //$NON-NLS-2$
         helpids.put(item4, "help.risk.overview"); //$NON-NLS-1$
         new LayoutRisks(item4, controller);
+        Composite item5 = root.createItem(Resources.getMessage("MainWindow.21"), controller.getResources().getManagedImage("perspective_attributes.png")); //$NON-NLS-1$ //$NON-NLS-2$
+        helpids.put(item5, "help.attributes.overview"); //$NON-NLS-1$
+        new LayoutAttributes(item5, controller);
 
         // Hack to update visualizations
         root.addSelectionListener(new SelectionAdapter(){
@@ -183,6 +196,9 @@ public class MainWindow implements IView {
                         break;
                     case 3: 
                         controller.getModel().setPerspective(Perspective.RISK);
+                        break;
+                    case 4: 
+                        controller.getModel().setPerspective(Perspective.ATTRIBUTES);
                         break;
                 }
                 controller.update(new ModelEvent(this, ModelPart.SELECTED_UTILITY_VISUALIZATION, null));
@@ -332,6 +348,19 @@ public class MainWindow implements IView {
     }
     
     /**
+     * Shows a preference dialog for editing parameter values of classification
+     * configurations.
+     * @param config 
+     * 
+     * @param model
+     */
+    public ARXClassificationConfiguration<?> showClassificationConfigurationDialog(ARXClassificationConfiguration<?> config) {
+        DialogClassificationConfiguration dialog = new DialogClassificationConfiguration(shell, config);
+        dialog.open();
+        return dialog.getResult();
+    }
+
+    /**
      * Shows a dialog for configuring privacy criteria.
      *
      * @param criteria
@@ -343,7 +372,7 @@ public class MainWindow implements IView {
         dialog.create();
         dialog.open();
     }
-
+    
     /**
      * Shows a debug dialog.
      */
@@ -352,7 +381,7 @@ public class MainWindow implements IView {
         dialog.create();
         dialog.open();
     }
-    
+
     /**
      * Shows an error dialog.
      *
@@ -385,22 +414,12 @@ public class MainWindow implements IView {
      * Shows an error dialog.
      *
      * @param message
-     * @param text
-     */
-    public void showErrorDialog(final String message, final String text) {
-        showErrorDialog(this.shell, message, text);
-    }
-
-    /**
-     * Shows an error dialog.
-     *
-     * @param message
      * @param throwable
      */
     public void showErrorDialog(final String message, final Throwable throwable) {
         showErrorDialog(this.shell, message, throwable);
     }
-
+    
     /**
      * Shows a find & replace dialog
      * @param handle
@@ -414,7 +433,7 @@ public class MainWindow implements IView {
         dialog.open();
         return dialog.getValue();
     }
-    
+
     /**
      * Shows an input dialog for selecting formats string for data types.
      *
@@ -427,8 +446,8 @@ public class MainWindow implements IView {
      * @param values
      * @return
      */
-    public String showFormatInputDialog(final Shell shell, final String header, final String text, final String preselected, final Locale locale, final DataTypeDescription<?> description, final Collection<String> values) {
-
+    public String[] showFormatInputDialog(final Shell shell, final String header, final String text, final String preselected, final Locale locale, final DataTypeDescription<?> description, final Collection<String> values) {
+        
         // Check
         if (!description.hasFormat()) {
             throw new RuntimeException(Resources.getMessage("MainWindow.6")); //$NON-NLS-1$
@@ -436,17 +455,17 @@ public class MainWindow implements IView {
 
         // Init
         final String DEFAULT = Resources.getMessage("MainWindow.7"); //$NON-NLS-1$
-
+        
         // Validator
-        final IInputValidator validator = new IInputValidator() {
+        final IValidator<String[]> validator = new IValidator<String[]>() {
             @Override
-            public String isValid(final String arg0) {
+            public String isValid(final String[] state) {
                 DataType<?> type;
                 try {
-                    if (arg0.equals(DEFAULT)) {
+                    if (state[0].equals(DEFAULT) || state[1] == null) {
                         type = description.newInstance();
                     } else {
-                        type = description.newInstance(arg0, locale);
+                        type = description.newInstance(state[0], getLocale(state[1]));
                     }
                 } catch (final Exception e) {
                     return Resources.getMessage("MainWindow.11"); //$NON-NLS-1$
@@ -461,31 +480,42 @@ public class MainWindow implements IView {
         };
 
         // Try to find a valid formatter
-        String initial = ""; //$NON-NLS-1$
-        if (preselected != null && validator.isValid(preselected) == null) {
-            initial = preselected;
-        } else if (validator.isValid(DEFAULT) == null) {
-            initial = DEFAULT;
+        String initial1 = ""; //$NON-NLS-1$
+        String initial2 = locale == null ? "" : locale.getLanguage().toUpperCase();
+        if (preselected != null && validator.isValid(new String[]{preselected, initial2}) == null) {
+            initial1 = preselected;
+        } else if (validator.isValid(new String[]{DEFAULT, initial2}) == null) {
+            initial1 = DEFAULT;
         } else {
             for (final String format : description.getExampleFormats()) {
-                if (validator.isValid(format) == null) {
-                    initial = format;
+                if (validator.isValid(new String[]{format, initial2}) == null) {
+                    initial1 = format;
                     break;
                 }
             }
         }
-
         // Extract list of formats
         List<String> formats = new ArrayList<String>();
         formats.add(DEFAULT);
         formats.addAll(description.getExampleFormats());
+        
+        // Extract list of locales
+        Set<String> set = new HashSet<String>();
+        for (Locale _locale : Locale.getAvailableLocales()) {
+            set.add(_locale.getLanguage().toUpperCase());
+        }
+        List<String> locales = new ArrayList<>(set);
+        Collections.sort(locales);
 
-        // Open dialog
-        final DialogComboSelection dlg = new DialogComboSelection(shell, header, text, formats.toArray(new String[] {}), initial, validator);
+        // Create dialog
+        DialogComboDoubleSelection dlg = new DialogComboDoubleSelection(shell, header, text, 
+                                                                        formats.toArray(new String[] {}), initial1, 
+                                                                        locales.toArray(new String[] {}), initial2,
+                                                                        validator);
 
-        // Return value
+        // Open and return value
         if (dlg.open() == Window.OK) {
-            return dlg.getValue();
+            return new String[]{dlg.getValue1(), dlg.getValue2()};
         } else {
             return null;
         }
@@ -548,6 +578,19 @@ public class MainWindow implements IView {
         }
     }
     /**
+     * Shows a dialog for anonymization parameters
+     * @param model
+     * @return Returns the parameters selected by the user. Returns a pair. 
+     *         First: max. time per iteration. Second: min. records per iteration.
+     */
+    public ModelAnonymizationConfiguration showLocalAnonymizationDialog(Model model) {
+        DialogAnonymization dialog = new DialogAnonymization(shell, model);
+        dialog.create();
+        dialog.open();
+        return dialog.getResult();
+    }
+
+    /**
      * Shows a dialog that allows selecting multiple elements
      * @param shell
      * @param title
@@ -557,10 +600,10 @@ public class MainWindow implements IView {
      * @return
      */
     public List<String> showMultiSelectionDialog(Shell shell,
-                                                       String title,
-                                                       String text,
-                                                       List<String> elements,
-                                                       List<String> selected) {
+                                                 String title,
+                                                 String text,
+                                                 List<String> elements,
+                                                 List<String> selected) {
 
         // Open dialog
         DialogMultiSelection dlg = new DialogMultiSelection(shell, title, text, elements, selected);
@@ -673,6 +716,7 @@ public class MainWindow implements IView {
         dialog.setFilterIndex(0);
         return dialog.open();
     }
+    
 
     /**
      * Shows a dialog for selecting privacy criteria.
@@ -718,6 +762,19 @@ public class MainWindow implements IView {
         }
     }
     
+    /**
+     * Returns the local for the given isoLanguage
+     * @param isoLanguage
+     * @return
+     */
+    private Locale getLocale(String isoLanguage) {
+        for (Locale locale : Locale.getAvailableLocales()) {
+            if (locale.getLanguage().toUpperCase().equals(isoLanguage.toUpperCase())) {
+                return locale;
+            }
+        }
+        throw new IllegalStateException("Unknown locale");
+    }
 
     /**
      * Creates the global menu
@@ -735,7 +792,6 @@ public class MainWindow implements IView {
         return menu;
     }
 
-
     /**
      * Creates the edit menu
      * @return
@@ -747,20 +803,13 @@ public class MainWindow implements IView {
         items.add(new MainMenuItem(Resources.getMessage("MainMenu.21"), //$NON-NLS-1$
                                    controller.getResources().getManagedImage("edit_anonymize.png"), //$NON-NLS-1$
                                    true) {
-            public void action(Controller controller) { controller.actionMenuEditAnonymize(false); }
+            public void action(Controller controller) { controller.actionMenuEditAnonymize(); }
             public boolean isEnabled(Model model) { 
                 return model != null && model.getPerspective() == Perspective.CONFIGURATION;
             }
         });
 
-        items.add(new MainMenuItem(Resources.getMessage("MainMenu.40"), //$NON-NLS-1$
-                                   controller.getResources().getManagedImage("edit_anonymize_heuristic.png"), //$NON-NLS-1$
-                                   true) {
-            public void action(Controller controller) { controller.actionMenuEditAnonymize(true); }
-            public boolean isEnabled(Model model) { 
-                return model != null && model.getPerspective() == Perspective.CONFIGURATION;
-            }
-        });
+        items.add(new MainMenuSeparator());
 
         items.add(new MainMenuItem(Resources.getMessage("MainMenu.39"), //$NON-NLS-1$
                                    controller.getResources().getManagedImage("cross.png"), //$NON-NLS-1$
@@ -873,7 +922,7 @@ public class MainWindow implements IView {
                                    true) {
             public void action(Controller controller) { controller.actionApplySelectedTransformation(); }
             public boolean isEnabled(Model model) { 
-                return model != null && model.getResult() != null && model.getSelectedNode() != null;
+                return model != null && model.getResult() != null && model.getSelectedNode() != null && !model.getProcessStatistics().isLocalTransformation();
             }
         });
         
@@ -1093,6 +1142,17 @@ public class MainWindow implements IView {
             }
             public boolean isEnabled(Model model) { return model != null && model.getPerspective() != Perspective.RISK; }
         });
+        
+        items.add(new MainMenuItem(Resources.getMessage("MainWindow.21"), //$NON-NLS-1$
+                                   controller.getResources().getManagedImage("perspective_attributes.png"), //$NON-NLS-1$
+                                   false) {
+            public void action(Controller controller) { 
+                root.setSelection(4);
+                controller.getModel().setPerspective(Perspective.ATTRIBUTES);
+                controller.update(new ModelEvent(controller, ModelPart.SELECTED_PERSPECTIVE, controller.getModel().getPerspective()));
+            }
+            public boolean isEnabled(Model model) { return model != null && model.getPerspective() != Perspective.ATTRIBUTES; }
+        });
 
         items.add(new MainMenuSeparator());
 
@@ -1148,4 +1208,5 @@ public class MainWindow implements IView {
             }  
         };
     }
+
 }

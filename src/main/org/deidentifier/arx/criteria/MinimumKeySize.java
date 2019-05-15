@@ -19,9 +19,11 @@ package org.deidentifier.arx.criteria;
 
 import org.deidentifier.arx.ARXConfiguration;
 import org.deidentifier.arx.certificate.elements.ElementData;
-import org.deidentifier.arx.framework.check.groupify.HashGroupifyMatrix;
-import org.deidentifier.arx.risk.msu.SUDA2;
-import org.deidentifier.arx.risk.msu.SUDA2Listener;
+import org.deidentifier.arx.common.WrappedBoolean;
+import org.deidentifier.arx.framework.check.groupify.HashGroupifyArray;
+
+import de.linearbits.suda2.SUDA2;
+import de.linearbits.suda2.SUDA2ListenerKey;
 
 /**
  * This criterion ensures that all keys are at least of a given size
@@ -52,13 +54,16 @@ public class MinimumKeySize extends MatrixBasedCriterion {
     }
 
     @Override
-    public void enforce(final HashGroupifyMatrix matrix, int numMaxSuppressedOutliers) {
-        new SUDA2(matrix.getMatrix().getMatrix()).findKeys(minKeySize - 1, new SUDA2Listener() {
+    public boolean enforce(final HashGroupifyArray array, int numMaxSuppressedOutliers) {
+        final WrappedBoolean modified = new WrappedBoolean();
+        modified.value = false;
+        new SUDA2(array.getArray().getArray()).getKeys(minKeySize - 1, new SUDA2ListenerKey() {
             @Override
-            public void msuFound(int row, int size) {
-                matrix.suppress(row);
+            public void keyFound(int row, int size) {
+                modified.value = modified.value | array.suppress(row);
             }
         });
+        return modified.value;
     }
     
     /**

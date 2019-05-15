@@ -1,6 +1,6 @@
 /*
  * ARX: Powerful Data Anonymization
- * Copyright 2012 - 2017 Fabian Prasser, Florian Kohlmayer and contributors
+ * Copyright 2012 - 2018 Fabian Prasser and contributors
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,17 +43,10 @@ public class LayoutRisksTop extends LayoutRisksAbstract {
                           final ModelPart reset) {
 
         super(parent, controller, target == ModelPart.INPUT, true);
-        
-        registerView(0, new ViewRisksRiskDistributionPlot(createTab(Resources.getMessage("RiskAnalysis.4"), "help.risk.classsizes"), controller, target, reset)); //$NON-NLS-1$ //$NON-NLS-2$
-        registerView(1, new ViewRisksRiskDistributionTable(createTab(Resources.getMessage("RiskAnalysis.0"), "help.risk.classsizes"), controller, target, reset)); //$NON-NLS-1$ //$NON-NLS-2$
-        registerView(2, new ViewRisksQuasiIdentifiersTable(createTab(Resources.getMessage("RiskAnalysis.15"), "help.risk.quasiidentifiers"), controller, target, reset)); //$NON-NLS-1$ //$NON-NLS-2$
-        registerView(3, new ViewRisksReIdentification(createTab(Resources.getMessage("RiskAnalysis.32"), "help.risk.reidentification"), controller, target, reset)); //$NON-NLS-1$ //$NON-NLS-2$
-        registerView(4, new ViewRisksMSUs(createTab(Resources.getMessage("RiskAnalysis.45"), "help.risk.msu"), controller, target, reset)); //$NON-NLS-1$ //$NON-NLS-2$
-        
-        if (target == ModelPart.INPUT) {
-            new ViewRisksHIPAAIdentifiersTable(createTab(Resources.getMessage("RiskAnalysis.26"), "help.risk.hipaa"), controller, target, reset); //$NON-NLS-1$ //$NON-NLS-2$
-        }
-        
+        registerView(0, new ViewRisksRiskDistribution(createTab(Resources.getMessage("RiskAnalysis.4"), "help.risk.classsizes"), controller, target, reset)); //$NON-NLS-1$ //$NON-NLS-2$
+        registerView(1, new ViewRisksAttackerModels(createTab(Resources.getMessage("RiskAnalysis.32"), "help.risk.reidentification"), controller, target, reset)); //$NON-NLS-1$ //$NON-NLS-2$
+        registerView(2, new ViewRisksMSUKeyStatistics(createTab(Resources.getMessage("RiskAnalysis.45"), "help.risk.msu.keys"), controller, target, reset)); //$NON-NLS-1$ //$NON-NLS-2$
+        registerView(3, new ViewRisksMSUIntrusionSimulation(createTab(Resources.getMessage("RiskAnalysis.46"), "help.risk.msu.dis"), controller, target, reset)); //$NON-NLS-1$ //$NON-NLS-2$
         setSelectionIdex(0);
     }
 }

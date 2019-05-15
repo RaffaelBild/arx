@@ -1,6 +1,6 @@
 /*
  * ARX: Powerful Data Anonymization
- * Copyright 2012 - 2017 Fabian Prasser, Florian Kohlmayer and contributors
+ * Copyright 2012 - 2018 Fabian Prasser and contributors
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import org.deidentifier.arx.gui.model.Model.Perspective;
 import org.deidentifier.arx.gui.model.ModelEvent;
 import org.deidentifier.arx.gui.model.ModelEvent.ModelPart;
 import org.deidentifier.arx.gui.model.ModelRisk.ViewRiskType;
+import org.deidentifier.arx.gui.view.def.IAnalysis;
 import org.deidentifier.arx.gui.view.def.IView;
 import org.deidentifier.arx.gui.view.impl.common.ComponentStatus;
 import org.deidentifier.arx.gui.view.impl.common.ComponentStatusLabelProgressProvider;
@@ -46,7 +47,7 @@ import org.eclipse.swt.widgets.Control;
  * @author Fabian Prasser
  * @param <T>
  */
-public abstract class ViewRisks<T extends AnalysisContextVisualization> implements IView {
+public abstract class ViewRisks<T extends AnalysisContextVisualization> implements IView, IAnalysis {
 
     /** Our users are patient. */
     public static final int       MINIMAL_WORKING_TIME = 500;
@@ -112,6 +113,7 @@ public abstract class ViewRisks<T extends AnalysisContextVisualization> implemen
         this.status = new ComponentStatus(controller,
                                           parent, 
                                           control,
+                                          this,
                                           getProgressProvider());
         
         // Reset
@@ -147,6 +149,19 @@ public abstract class ViewRisks<T extends AnalysisContextVisualization> implemen
             this.viewContext = null;
             this.update();
         }
+    }
+    
+    @Override
+    public void triggerStop() {
+        this.viewContext = null;
+        this.doReset();
+        this.setStatusEmpty();
+    }
+
+    @Override
+    public void triggerUpdate() {
+        this.viewContext = null;
+        this.update();
     }
     
     @Override
@@ -191,13 +206,12 @@ public abstract class ViewRisks<T extends AnalysisContextVisualization> implemen
         
         // Disable the view
         if (!this.isEnabled()) {
-            this.doReset();
-            this.setStatusEmpty();
+            triggerStop();
             return;
         }
 
         // Check visibility
-        if (!this.status.isVisible()){
+        if (!this.status.isVisible() || this.status.isStopped()) {
             return;
         }
 
@@ -223,7 +237,7 @@ public abstract class ViewRisks<T extends AnalysisContextVisualization> implemen
             status.setWorking();
         }
     }
-    
+
     /**
      * 
      * Implement this to create the widget.
@@ -232,7 +246,7 @@ public abstract class ViewRisks<T extends AnalysisContextVisualization> implemen
      * @return
      */
     protected abstract Control createControl(Composite parent);
-
+    
     /**
      * Creates a view config
      *
@@ -252,7 +266,7 @@ public abstract class ViewRisks<T extends AnalysisContextVisualization> implemen
      * @param context
      */
     protected abstract void doUpdate(T context);
-    
+
     /**
      * Creates a risk estimate builder
      * @param context
@@ -287,7 +301,7 @@ public abstract class ViewRisks<T extends AnalysisContextVisualization> implemen
                                                analysisContext.getModel().getRiskModel().getSolverConfiguration())
                                                .getInterruptibleInstance();
     }
-
+    
     /**
      * Creates a risk estimate builder
      * @param context
@@ -303,7 +317,7 @@ public abstract class ViewRisks<T extends AnalysisContextVisualization> implemen
                                                analysisContext.getModel().getRiskModel().getSolverConfiguration())
                                                .getInterruptibleInstance();
     }
-    
+
     /**
      * Returns the model
      * @return
@@ -312,13 +326,13 @@ public abstract class ViewRisks<T extends AnalysisContextVisualization> implemen
         return this.model;
     }
 
+    
     /**
      * May return a progress provider, if any
      * @return
      */
     protected abstract ComponentStatusLabelProgressProvider getProgressProvider();
 
-    
     /**
      * Returns a string containing all quasi-identifiers
      * @param context
@@ -344,7 +358,7 @@ public abstract class ViewRisks<T extends AnalysisContextVisualization> implemen
      * @return
      */
     protected abstract ViewRiskType getViewType();
-
+    
     /**
      * Is this an input data oriented control
      * @return
@@ -352,22 +366,22 @@ public abstract class ViewRisks<T extends AnalysisContextVisualization> implemen
     protected boolean isInput() {
         return target == ModelPart.INPUT;
     }
-    
+
     /**
      * Is a job running
      * @return
      */
     protected abstract boolean isRunning();
-
+    
     /**
      * Is there still some data to show
      * @return
      */
     protected boolean isValid() {
         if (this.target == ModelPart.INPUT) {
-            return this.model != null && this.model.getInputConfig() != null && this.model.getInputConfig().getInput() != null;
+            return this.viewContext != null && this.model != null && this.model.getInputConfig() != null && this.model.getInputConfig().getInput() != null;
         } else {
-            return this.model != null && this.model.getOutput() != null;
+            return this.viewContext != null && this.model != null && this.model.getOutput() != null;
         }
     }
     
@@ -377,26 +391,18 @@ public abstract class ViewRisks<T extends AnalysisContextVisualization> implemen
     protected void setStatusDone(){
         this.status.setDone();
     }
-    
+
     /**
      * Status empty.
      */
     protected void setStatusEmpty(){
         this.status.setEmpty();
     }
-
+    
     /**
      * Status working.
      */
     protected void setStatusWorking(){
         this.status.setWorking();
-    }
-    
-    /**
-     * Triggers an update
-     */
-    protected void triggerUpdate() {
-        this.viewContext = null;
-        this.update();
     }
 }

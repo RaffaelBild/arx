@@ -1,6 +1,6 @@
 /*
  * ARX: Powerful Data Anonymization
- * Copyright 2012 - 2017 Fabian Prasser, Florian Kohlmayer and contributors
+ * Copyright 2012 - 2018 Fabian Prasser and contributors
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,11 +52,11 @@ public class ModelRisk implements Serializable {
         CLASSES_PLOT,
         CLASSES_TABLE,
         CELL_BASED,
-        ATTRIBUTES,
-        HIPAA_ATTRIBUTES,
+        KEY_SIZE,
         UNIQUES_DANKAR,
         UNIQUES_ALL,
-        OVERVIEW
+        OVERVIEW,
+        INTRUSION_SIMULATION
     }
 
     /** SVUID */
@@ -83,6 +83,10 @@ public class ModelRisk implements Serializable {
     private Double                     riskThresholdHighestRisk;
     /** Model */
     private Double                     riskThresholdSuccessRate;
+    /** MaxK for running SUDA*/
+    private Integer                    maxK;
+    /** Mimic sdcMicro when calculating SUDA scores*/
+    private Boolean                    sdcMicroScores;
 
     /**
      * Creates a new instance
@@ -92,12 +96,24 @@ public class ModelRisk implements Serializable {
     }
 
     /**
+     * Set to 0 to enforce no limit
+     * @return
+     */
+    public int getMaxKeySize() {
+        if (maxK == null) {
+            maxK = 0;
+        }
+        return maxK;
+    }
+
+    /**
+     * Fits better into ModelAttributes, but remains here for compatibility purposes
      * @return the maxQiSize
      */
     public int getMaxQiSize() {
         return maxQiSize;
     }
-
+    
     /**
      * Returns the backing model
      * @return
@@ -105,7 +121,7 @@ public class ModelRisk implements Serializable {
     public ARXPopulationModel getPopulationModel() {
         return this.populationModel;
     }
-    
+
     /**
      * @param handle
      * @return
@@ -122,7 +138,7 @@ public class ModelRisk implements Serializable {
     public Region getRegion() {
         return this.populationModel.getRegion();
     }
-
+    
     /**
      * Returns the risk model used for attribute analyses
      * @return
@@ -141,7 +157,7 @@ public class ModelRisk implements Serializable {
         }
         return riskThresholdHighestRisk;
     }
-    
+
     /**
      * Returns a threshold
      * @return
@@ -163,14 +179,14 @@ public class ModelRisk implements Serializable {
         }
         return riskThresholdSuccessRate;
     }
-
+    
     /**
      * Returns the solver configuration
      */
     public ARXSolverConfiguration getSolverConfiguration() {
         return config;
     }
-    
+
     /**
      * Is this model modified
      * @return
@@ -178,7 +194,18 @@ public class ModelRisk implements Serializable {
     public boolean isModified() {
         return modified || config.isModified();
     }
-
+    
+    /**
+     * Mimic sdcMicro or follow definition by Elliot
+     * @return
+     */
+    public boolean isSdcMicroScores() {
+        if (sdcMicroScores == null) {
+            sdcMicroScores = true;
+        }
+        return sdcMicroScores;
+    }
+    
     /***
      * Returns whether a view is enabled
      * @param view
@@ -191,7 +218,7 @@ public class ModelRisk implements Serializable {
             return viewEnabledForInput.get(view);
         }
     }
-    
+
     /***
      * Returns whether a view is enabled
      * @param view
@@ -204,8 +231,17 @@ public class ModelRisk implements Serializable {
             return viewEnabledForOutput.get(view);
         }
     }
-    
+
     /**
+     * Sets the max key size for running SUDA
+     * @param size
+     */
+    public void setMaxKeySize(int size) {
+        this.maxK = size;
+    }
+
+    /**
+     * Fits better into ModelAttributes, but remains here for compatibility purposes
      * @param maxQiSize the maxQiSize to set
      */
     public void setMaxQiSize(int maxQiSize) {
@@ -282,13 +318,21 @@ public class ModelRisk implements Serializable {
     }
 
     /**
+     * Sets whether sdcMicro should be followed or Elliot..
+     * @param sdcMicroScores
+     */
+    public void setSdcMicroScores(boolean sdcMicroScores) {
+        this.sdcMicroScores = sdcMicroScores;
+    }
+
+    /**
      * Set unmodified
      */
     public void setUnmodified() {
         this.modified = false;
         this.config.setUnmodified();
     }
-
+    
     /**
      * Allows to enable/disable views
      * @param view
@@ -297,7 +341,7 @@ public class ModelRisk implements Serializable {
     public void setViewEnabledForInput(ViewRiskType view, boolean value) {
         this.viewEnabledForInput.put(view, value);
     }
-
+    
     /**
      * Allows to enable/disable views
      * @param view

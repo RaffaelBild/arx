@@ -1,6 +1,6 @@
 /*
  * ARX: Powerful Data Anonymization
- * Copyright 2012 - 2017 Fabian Prasser, Florian Kohlmayer and contributors
+ * Copyright 2012 - 2018 Fabian Prasser and contributors
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,15 @@ import java.io.InputStream;
 
 import org.deidentifier.arx.gui.Controller;
 import org.deidentifier.arx.gui.resources.Resources;
+import org.deidentifier.arx.gui.view.SWTUtil;
+import org.deidentifier.arx.gui.view.def.IAnalysis;
+import org.deidentifier.arx.gui.view.impl.utility.ViewStatistics;
+import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StackLayout;
-import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 
@@ -35,23 +41,60 @@ import org.eclipse.swt.widgets.Control;
  */
 public class ComponentStatus {
 
-    /**  View */
-    private final Controller controller;
+    /** View */
+    private final Controller        controller;
+
+    /** View */
+    private final StackLayout       layout;
+
+    /** View */
+    private final Composite         working;
+
+    /** View */
+    private final Composite         empty;
+
+    /** View */
+    private final Composite         parent;
+
+    /** View */
+    private final Control           child;
+
+    /** View */
+    private final IAnalysis         view;
     
-    /**  View */
-    private final StackLayout layout;
-    
-    /**  View */
-    private final Composite working;
-    
-    /**  View */
-    private final Composite empty;
-    
-    /**  View */
-    private final Composite parent;
-    
-    /**  View */
-    private final Control child;
+    /** Status */
+    private boolean                 stopped = false;
+
+    /**
+     * Creates a new instace
+     * @param controller
+     * @param parent
+     * @param control
+     * @param view
+     * @param progressProvider
+     */
+    public ComponentStatus(Controller controller,
+                           Composite parent,
+                           Control child,
+                           IAnalysis view,
+                           ComponentStatusLabelProgressProvider progressProvider) {
+
+        this.child = child;
+        this.parent = parent;
+        this.controller = controller;
+        this.view = view;
+        
+        if (parent.getLayout() == null ||
+            !(parent.getLayout() instanceof StackLayout)) {
+            throw new RuntimeException("Parent must have a StackLayout"); //$NON-NLS-1$
+        }
+        
+        this.layout = (StackLayout)parent.getLayout();
+        this.working = getWorkingComposite(parent, progressProvider);
+        this.empty = getEmptyComposite(parent);
+        this.layout.topControl = child;
+        this.parent.layout(true);
+    }
 
     /**
      * Creates a new instance.
@@ -62,50 +105,36 @@ public class ComponentStatus {
      */
     public ComponentStatus(Controller controller,
                            Composite parent,
-                           Control child) {
-        this(controller, parent, child, null);
+                           Control child,
+                           ViewStatistics<?> view) {
+        this(controller, parent, child, view, null);
+    }
+    
+    /**
+     * Returns whether the current status is "empty"
+     * @return
+     */
+    public boolean isEmpty() {
+        return this.layout.topControl == empty;
     }
 
     /**
-     * Creates a new instance.
-     *
-     * @param controller
-     * @param parent
-     * @param child
-     * @param provider
+     * Has the analysis been stopped by the user.
+     * @return
      */
-    public ComponentStatus(Controller controller, 
-                           Composite parent, 
-                           Control child,
-                           ComponentStatusLabelProgressProvider progressProvider){
-        
-        this.child = child;
-        this.parent = parent;
-        this.controller = controller;
-        
-        if (parent.getLayout() == null ||
-            !(parent.getLayout() instanceof StackLayout)) {
-            throw new RuntimeException("Parent must have a StackLayout"); //$NON-NLS-1$
-        }
-        
-        this.layout = (StackLayout)parent.getLayout();
-        
-        this.working = getWorkingComposite(parent, progressProvider);
-        this.empty = getEmptyComposite(parent);
-        
-        this.layout.topControl = child;
-        this.parent.layout(true);
+    public boolean isStopped() {
+        return stopped;
     }
-    
+
     /**
      * Is the current status visible.
      *
      * @return
      */
-    public boolean isVisible(){
+    public boolean isVisible() {
         return this.parent.isVisible();
     }
-
+    
     /**
      * Enables status 'done'. Shows the actual control.
      */
@@ -113,7 +142,7 @@ public class ComponentStatus {
         this.layout.topControl = child;
         this.parent.layout();
     }
-
+    
     /**
      * Enables status 'empty'.
      */
@@ -138,12 +167,25 @@ public class ComponentStatus {
      */
     private Composite getEmptyComposite(Composite parent) {
         Composite composite = new Composite(parent, SWT.NONE);
-        composite.setLayout(new FillLayout());
+        composite.setLayout(SWTUtil.createGridLayout(1));
         ComponentStatusLabel label = new ComponentStatusLabel(composite, SWT.CENTER);
-        label.setText(Resources.getMessage("ComponentStatus.1")); //$NON-NLS-1$
+        label.setText(Resources.getMessage("ComponentStatus.1"));
+        label.setLayoutData(GridDataFactory.swtDefaults().align(SWT.CENTER, SWT.BOTTOM).grab(true, true).create());
+        Button update = new Button(composite, SWT.PUSH);
+        update.setText(Resources.getMessage("ComponentStatus.2")); //$NON-NLS-1$
+        update.setLayoutData(GridDataFactory.swtDefaults().align(SWT.CENTER, SWT.TOP).grab(false, true).create());
+        update.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(SelectionEvent arg0) {
+                stopped = false;
+                if (view != null) {
+                    view.triggerUpdate();
+                }
+            }
+        });
         return composite;
     }
-    
+
     /**
      * Creates a composite for the working status.
      *
@@ -151,9 +193,12 @@ public class ComponentStatus {
      * @return
      */
     private Composite getWorkingComposite(Composite parent, ComponentStatusLabelProgressProvider provider) {
+        
         Composite composite = new Composite(parent, SWT.NONE);
-        composite.setLayout(new FillLayout());
+        composite.setLayout(SWTUtil.createGridLayout(1));
+        
         ComponentStatusLabel label = new ComponentStatusLabel(composite, SWT.CENTER);
+        label.setLayoutData(GridDataFactory.swtDefaults().align(SWT.FILL, SWT.BOTTOM).grab(true, true).create());
         InputStream stream = controller.getResources().getStream("working.gif"); //$NON-NLS-1$
         try {
             label.setGIF(stream);
@@ -170,6 +215,19 @@ public class ComponentStatus {
         if (provider != null) {
             label.setProgressProvider(provider);
         }
+
+        Button stop = new Button(composite, SWT.PUSH);
+        stop.setText(Resources.getMessage("ComponentStatus.4")); //$NON-NLS-1$
+        stop.setLayoutData(GridDataFactory.swtDefaults().align(SWT.CENTER, SWT.TOP).grab(false, true).create());
+        stop.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(SelectionEvent arg0) {
+                stopped = true;
+                if (view != null) {
+                    view.triggerStop();
+                }
+            }
+        });
         return composite;
     }
 }

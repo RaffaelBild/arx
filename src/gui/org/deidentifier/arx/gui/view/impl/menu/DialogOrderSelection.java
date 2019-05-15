@@ -1,6 +1,6 @@
 /*
  * ARX: Powerful Data Anonymization
- * Copyright 2012 - 2017 Fabian Prasser, Florian Kohlmayer and contributors
+ * Copyright 2012 - 2018 Fabian Prasser and contributors
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -180,6 +180,20 @@ public class DialogOrderSelection extends TitleAreaDialog implements IDialog {
         throw new RuntimeException(Resources.getMessage("DialogOrderSelection.2")+type.getDescription().getLabel()); //$NON-NLS-1$
     }
 
+    /**
+     * Returns the local for the given isoLanguage
+     * @param isoLanguage
+     * @return
+     */
+    private Locale getLocale(String isoLanguage) {
+        for (Locale locale : Locale.getAvailableLocales()) {
+            if (locale.getLanguage().toUpperCase().equals(isoLanguage.toUpperCase())) {
+                return locale;
+            }
+        }
+        throw new IllegalStateException("Unknown locale");
+    }
+    
     /**
      * Checks whether the data type is valid.
      *
@@ -472,12 +486,12 @@ public class DialogOrderSelection extends TitleAreaDialog implements IDialog {
                         if (description.hasFormat()) {
                             final String text1 = Resources.getMessage("AttributeDefinitionView.9"); //$NON-NLS-1$
                             final String text2 = Resources.getMessage("AttributeDefinitionView.10"); //$NON-NLS-1$
-                            final String format = controller.actionShowFormatInputDialog(getShell(), text1, text2, locale, description, elements);
-                            if (format == null) {
+                            final String format[] = controller.actionShowFormatInputDialog(getShell(), text1, text2, locale, description, elements);
+                            if (format == null || format[0] == null) {
                                 type = DataType.STRING;
-                                combo.select(getIndexOfDataType(DataType.STRING)+1);
+                                combo.select(getIndexOfDataType(DataType.STRING) + 1);
                             } else {
-                                type = description.newInstance(format, locale);
+                                type = description.newInstance(format[0], format[1] != null ? getLocale(format[1]) : locale);
                             }
                         } else {
                             type = description.newInstance();

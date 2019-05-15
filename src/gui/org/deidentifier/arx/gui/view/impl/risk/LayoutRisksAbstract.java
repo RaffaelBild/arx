@@ -1,6 +1,6 @@
 /*
  * ARX: Powerful Data Anonymization
- * Copyright 2012 - 2017 Fabian Prasser, Florian Kohlmayer and contributors
+ * Copyright 2012 - 2018 Fabian Prasser and contributors
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -167,6 +167,21 @@ public class LayoutRisksAbstract implements ILayout, IView {
      */
     public ViewRisks<?> getViewForSelectionIndex(final int index) {
         return this.views.get(index);
+    }
+
+    /**
+     * Returns the according view type
+     * @param clazz
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public <U> U getViewForType(final Class<U> clazz) {
+        for (ViewRisks<?> view : this.views.values()) {
+            if (view.getClass().equals(clazz)) {
+                return (U)view;
+            }
+        }
+        return null;
     }
     
     @Override

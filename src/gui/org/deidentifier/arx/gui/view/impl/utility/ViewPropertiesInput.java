@@ -1,6 +1,6 @@
 /*
  * ARX: Powerful Data Anonymization
- * Copyright 2012 - 2017 Fabian Prasser, Florian Kohlmayer and contributors
+ * Copyright 2012 - 2018 Fabian Prasser and contributors
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@
  */
 
 package org.deidentifier.arx.gui.view.impl.utility;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import org.deidentifier.arx.ARXCostBenefitConfiguration;
 import org.deidentifier.arx.DataDefinition;
@@ -269,11 +272,12 @@ public class ViewPropertiesInput extends ViewProperties {
         root.setRedraw(false);
         
         // Clear
+        List<Property> previous = new ArrayList<Property>(roots);
         roots.clear();
         
         // Print basic properties
         new Property(Resources.getMessage("PropertiesView.9"), new String[] { String.valueOf(data.getNumRows()) }); //$NON-NLS-1$
-        new Property(Resources.getMessage("PropertiesView.10"), new String[] { SWTUtil.getPrettyString(config.getAllowedOutliers() * 100d) + Resources.getMessage("PropertiesView.11") }); //$NON-NLS-1$ //$NON-NLS-2$
+        new Property(Resources.getMessage("PropertiesView.10"), new String[] { SWTUtil.getPrettyString(config.getSuppressionLimit() * 100d) + Resources.getMessage("PropertiesView.11") }); //$NON-NLS-1$ //$NON-NLS-2$
         
         // Utility measure
         Property m = new Property(Resources.getMessage("PropertiesView.114"), new String[] { metric.getDescription().getName() }); //$NON-NLS-1$
@@ -287,10 +291,10 @@ public class ViewPropertiesInput extends ViewProperties {
             new Property(m, Resources.getMessage("PropertiesView.152"), new String[] { SWTUtil.getPrettyString(metric.getGeneralizationFactor()) }); //$NON-NLS-1$
             new Property(m, Resources.getMessage("PropertiesView.153"), new String[] { SWTUtil.getPrettyString(metric.getSuppressionFactor()) }); //$NON-NLS-1$
         }
-        new Property(m, Resources.getMessage("PropertiesView.155"), new String[] { SWTUtil.getPrettyString(metric.isMonotonic(config.getAllowedOutliers())) }); //$NON-NLS-1$
+        new Property(m, Resources.getMessage("PropertiesView.155"), new String[] { SWTUtil.getPrettyString(metric.isMonotonic(config.getSuppressionLimit())) }); //$NON-NLS-1$
         new Property(m, Resources.getMessage("PropertiesView.156"), new String[] { SWTUtil.getPrettyString(metric.isWeighted()) }); //$NON-NLS-1$
         new Property(m, Resources.getMessage("PropertiesView.157"), new String[] { SWTUtil.getPrettyString(metric.isPrecomputed()) }); //$NON-NLS-1$
-        new Property(m, Resources.getMessage("PropertiesView.158"), new String[] { SWTUtil.getPrettyString(metric.isAbleToHandleMicroaggregation() && config.isUtilityBasedMicroaggregation())}); //$NON-NLS-1$
+        new Property(m, Resources.getMessage("PropertiesView.158"), new String[] { SWTUtil.getPrettyString(metric.isAbleToHandleMicroaggregation())}); //$NON-NLS-1$
                 
         // Cost/benefit configuration
         if (metric instanceof MetricSDNMPublisherPayout) {
@@ -405,7 +409,9 @@ public class ViewPropertiesInput extends ViewProperties {
         }
 
         // Refresh and initialize
-        refresh();
+        if (!previous.equals(roots)) {
+            refresh();
+        }
 
         // Redraw
         root.setRedraw(true);

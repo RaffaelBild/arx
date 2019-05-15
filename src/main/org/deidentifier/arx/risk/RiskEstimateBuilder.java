@@ -1,6 +1,6 @@
 /*
  * ARX: Powerful Data Anonymization
- * Copyright 2012 - 2017 Fabian Prasser, Florian Kohlmayer and contributors
+ * Copyright 2012 - 2018 Fabian Prasser and contributors
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import org.deidentifier.arx.ARXConfiguration;
 import org.deidentifier.arx.ARXPopulationModel;
 import org.deidentifier.arx.ARXSolverConfiguration;
 import org.deidentifier.arx.DataHandleInternal;
+import org.deidentifier.arx.DataType;
 import org.deidentifier.arx.common.WrappedBoolean;
 import org.deidentifier.arx.common.WrappedInteger;
 
@@ -132,7 +133,7 @@ public class RiskEstimateBuilder {
                                 ARXConfiguration arxconfig) {
         this.population = population;
         this.handle = handle;
-        this.identifiers = identifiers;
+        this.identifiers = identifiers != null ? identifiers : handle.getDefinition().getQuasiIdentifyingAttributes();
         this.classes = classes;
         this.solverconfig = solverconfig;
         this.arxconfig = arxconfig;
@@ -157,7 +158,7 @@ public class RiskEstimateBuilder {
                         ARXConfiguration arxconfig) {
         this.population = population;
         this.handle = handle;
-        this.identifiers = identifiers;
+        this.identifiers = identifiers != null ? identifiers : handle.getDefinition().getQuasiIdentifyingAttributes();
         this.classes = null;
         this.solverconfig = solverconfig;
         this.arxconfig = arxconfig;
@@ -218,12 +219,30 @@ public class RiskEstimateBuilder {
     }
     
     /**
-     * Returns a model of the MSUs in this data set
+     * Returns column statistics, mimics sdcMicro
      * @return
      */
-    public RiskModelMSU getMSUStatistics() {
+    public RiskModelMSUColumnStatistics getMSUColumnStatistics() {
+        return getMSUColumnStatistics(0, true);
+    }
+
+    /**
+     * Returns column statistics
+     * @param maxK The maximal size of an MSU considered
+     * @param sdcMicroScores Mimic sdcMicro or follow original definition by Elliot
+     * @return
+     */
+    public RiskModelMSUColumnStatistics getMSUColumnStatistics(int maxK, boolean sdcMicroScores) {
         progress.value = 0;
-        return new RiskModelMSU(this.handle, this.identifiers, progress, stop, 0);
+        return new RiskModelMSUColumnStatistics(this.handle, this.identifiers, progress, stop, maxK, sdcMicroScores);
+    }
+    
+    /**
+     * Returns a model of the MSUs in this data set. Mimics sdcMicro when calculating scores
+     * @return
+     */
+    public RiskModelMSUKeyStatistics getMSUKeyStatistics() {
+        return this.getMSUKeyStatistics(0);
     }
 
     /**
@@ -231,9 +250,28 @@ public class RiskEstimateBuilder {
      * @param maxK The maximal size of an MSU considered
      * @return
      */
-    public RiskModelMSU getMSUStatistics(int maxK) {
+    public RiskModelMSUKeyStatistics getMSUKeyStatistics(int maxK) {
         progress.value = 0;
-        return new RiskModelMSU(this.handle, this.identifiers, progress, stop, maxK);
+        return new RiskModelMSUKeyStatistics(this.handle, this.identifiers, progress, stop, maxK);
+    }
+
+    /**
+     * Returns score statistics, mimics sdcMicro
+     * @return
+     */
+    public RiskModelMSUScoreStatistics getMSUScoreStatistics() {
+        return getMSUScoreStatistics(0, true);
+    }
+
+    /**
+     * Returns score statistics
+     * @param maxK The maximal size of an MSU considered
+     * @param sdcMicroScores Mimic sdcMicro or follow original definition by Elliot
+     * @return
+     */
+    public RiskModelMSUScoreStatistics getMSUScoreStatistics(int maxK, boolean sdcMicroScores) {
+        progress.value = 0;
+        return new RiskModelMSUScoreStatistics(this.handle, this.identifiers, progress, stop, maxK, population, sdcMicroScores);
     }
 
     /**
@@ -274,12 +312,51 @@ public class RiskEstimateBuilder {
     /**
      * Returns a risk summary
      *
-     * @param threshold Acceptable highest probability of re-identification for a single record
+     * @param threshold Acceptable highest probability of re-identification for a single record. Please note that this
+     *                  threshold may be exceeded by up to 1% due to rounding issues.
      * @return
      */
     public RiskModelSampleSummary getSampleBasedRiskSummary(double threshold) {
         progress.value = 0;
         return new RiskModelSampleSummary(handle, identifiers, threshold, stop, progress);
+    }
+
+    /**
+     * Returns a risk summary
+     *
+     * @param threshold Acceptable highest probability of re-identification for a single record. Please note that this
+     *                  threshold may be exceeded by up to 1% due to rounding issues.
+     * @param suppressed
+     * @return
+     */
+    public RiskModelSampleSummary getSampleBasedRiskSummary(double threshold, String suppressed) {
+        progress.value = 0;
+        return new RiskModelSampleSummary(handle, identifiers, threshold, suppressed, stop, progress);
+    }
+
+    /**
+     * Returns a risk summary, using wildcard matching. "*" will be interpreted as a wildcard
+     *
+     * @param threshold Acceptable highest probability of re-identification for a single record. Please note that this
+     *                  threshold may be exceeded by up to 1% due to rounding issues.
+     * @return
+     */
+    public RiskModelSampleWildcard getSampleBasedRiskSummaryWildcard(double threshold) {
+        progress.value = 0;
+        return new RiskModelSampleWildcard(handle, identifiers, threshold, DataType.ANY_VALUE, stop, progress);
+    }
+
+    /**
+     * Returns a risk summary, using wildcard matching
+     *
+     * @param threshold Acceptable highest probability of re-identification for a single record. Please note that this
+     *                  threshold may be exceeded by up to 1% due to rounding issues.
+     * @param wildcard String to interpret as a wildcard
+     * @return
+     */
+    public RiskModelSampleWildcard getSampleBasedRiskSummaryWildcard(double threshold, String wildcard) {
+        progress.value = 0;
+        return new RiskModelSampleWildcard(handle, identifiers, threshold, wildcard, stop, progress);
     }
 
     /**

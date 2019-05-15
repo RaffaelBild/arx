@@ -1,6 +1,6 @@
 /*
  * ARX: Powerful Data Anonymization
- * Copyright 2012 - 2017 Fabian Prasser, Florian Kohlmayer and contributors
+ * Copyright 2012 - 2018 Fabian Prasser and contributors
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.deidentifier.arx.gui.model.ModelEvent;
 import org.deidentifier.arx.gui.model.ModelEvent.ModelPart;
 import org.deidentifier.arx.gui.view.SWTUtil;
 import org.deidentifier.arx.gui.view.def.ILayout;
+import org.deidentifier.arx.gui.view.impl.common.ComponentRiskProfile;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -99,7 +100,19 @@ public class LayoutRisks implements ILayout {
                                            controller,
                                            ModelPart.OUTPUT,
                                            ModelPart.INPUT);
+        
+        // Synchronize profiles
+        ComponentRiskProfile profile1 = layoutTopLeft.getViewForType(ViewRisksRiskDistribution.class).getRiskProfile();
+        ComponentRiskProfile profile2 = layoutTopRight.getViewForType(ViewRisksRiskDistribution.class).getRiskProfile();
+        profile1.setOtherProfile(profile2);
+        profile2.setOtherProfile(profile1);
 
+        // Synchronize profiles
+        profile1 = layoutTopLeft.getViewForType(ViewRisksMSUIntrusionSimulation.class).getRiskProfile();
+        profile2 = layoutTopRight.getViewForType(ViewRisksMSUIntrusionSimulation.class).getRiskProfile();
+        profile1.setOtherProfile(profile2);
+        profile2.setOtherProfile(profile1);
+        
         // Create bottom composite
         final Composite compositeBottom = new Composite(centerSash, SWT.NONE);
         compositeBottom.setLayout(new FillLayout());
@@ -129,15 +142,10 @@ public class LayoutRisks implements ILayout {
                 // Synchronize left and right side
                 layoutBottomRight.setSelectionIdex(layoutBottomLeft.getSelectionIndex());
                 
-                // Synchronize "Quasi-identifiers"
-                if (layoutBottomLeft.getSelectionIndex() == 2) {
-                    layoutTopLeft.setSelectionIdex(2);
-                    layoutTopRight.setSelectionIdex(2);
-                    
                 // Synchronize "Re-identification risks"
-                } else if (layoutBottomLeft.getSelectionIndex() == 0) {
-                    layoutTopLeft.setSelectionIdex(3);
-                    layoutTopRight.setSelectionIdex(3);
+                if (layoutBottomLeft.getSelectionIndex() == 0) {
+                    layoutTopLeft.setSelectionIdex(1);
+                    layoutTopRight.setSelectionIdex(1);
                 }
                 
                 controller.update(new ModelEvent(this, ModelPart.SELECTED_RISK_VISUALIZATION, null));
@@ -152,8 +160,8 @@ public class LayoutRisks implements ILayout {
                 
                 // Synchronize "Re-identification risks"
                 if (layoutBottomRight.getSelectionIndex() == 0) {
-                    layoutTopLeft.setSelectionIdex(3);
-                    layoutTopRight.setSelectionIdex(3);
+                    layoutTopLeft.setSelectionIdex(1);
+                    layoutTopRight.setSelectionIdex(1);
                 }
                 
                 controller.update(new ModelEvent(this, ModelPart.SELECTED_RISK_VISUALIZATION, null));
@@ -167,12 +175,8 @@ public class LayoutRisks implements ILayout {
                 // Synchronize left and right
                 layoutTopRight.setSelectionIdex(layoutTopLeft.getSelectionIndex());
 
-                // Synchronize "Quasi-identifiers"
-                if (layoutTopLeft.getSelectionIndex() == 2) {
-                    layoutBottomLeft.setSelectionIdex(2);
-
                 // Synchronize "Re-identification risks"
-                } else if (layoutTopLeft.getSelectionIndex() == 3) {
+                if (layoutTopLeft.getSelectionIndex() == 1) {
                     layoutBottomLeft.setSelectionIdex(0);
                     layoutBottomRight.setSelectionIdex(0);
                 }
@@ -187,13 +191,8 @@ public class LayoutRisks implements ILayout {
                 // Synchronize left and right
                 layoutTopLeft.setSelectionIdex(layoutTopRight.getSelectionIndex());
 
-                // Synchronize "Quasi-identifiers"
-                if (layoutTopRight.getSelectionIndex() == 2) {
-                    layoutBottomLeft.setSelectionIdex(2);
-                    
-
                 // Synchronize "Re-identification risks"
-                } else if (layoutTopRight.getSelectionIndex() == 3) {
+                if (layoutTopRight.getSelectionIndex() == 1) {
                     layoutBottomLeft.setSelectionIdex(0);
                     layoutBottomRight.setSelectionIdex(0);
                 }
