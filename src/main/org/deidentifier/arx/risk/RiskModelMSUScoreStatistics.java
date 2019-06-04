@@ -25,10 +25,9 @@ import org.deidentifier.arx.DataHandleInternal;
 import org.deidentifier.arx.common.WrappedBoolean;
 import org.deidentifier.arx.common.WrappedInteger;
 import org.deidentifier.arx.exceptions.ComputationInterruptedException;
-
-import de.linearbits.suda2.SUDA2;
-import de.linearbits.suda2.SUDA2ListenerProgress;
-import de.linearbits.suda2.SUDA2StatisticsScores;
+import org.deidentifier.arx.suda2.SUDA2;
+import org.deidentifier.arx.suda2.SUDA2ListenerProgress;
+import org.deidentifier.arx.suda2.SUDA2StatisticsScores;
 
 /**
  * A risk model based on MSUs in the data set, returning score statistics

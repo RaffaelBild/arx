@@ -7,7 +7,7 @@
     <property name="arx.version" value="3.7.1" />
 
     <!-- add extra parameter to javadoc generation if Java 1.8 is used -->
-    <condition property="javadoc.additionalparam" value="-notimestamp -Xdoclint:none" else="-notimestamp">
+    <condition property="javadoc.additionalparam" value="-notimestamp -Xdoclint:none" else="-notimestamp -Xdoclint:none">
         <equals arg1="${ant.java.version}" arg2="1.8" />
     </condition>
 
@@ -105,7 +105,7 @@
         <mkdir dir="build/test" />
         <mkdir dir="build/junitReports" />
 
-        <javac includeantruntime="false" srcdir="src/main:src/gui:src/example:src/test/" destdir="build/test" source="1.7" debug="true">
+        <javac includeantruntime="false" srcdir="src/main:src/gui:src/example:src/test/" destdir="build/test" source="1.7" target="1.7" debug="true">
             <classpath>
                 <fileset refid="lib.jars" />
                 <fileset refid="gui.jars" />

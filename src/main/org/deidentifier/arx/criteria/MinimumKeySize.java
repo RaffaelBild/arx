@@ -21,9 +21,8 @@ import org.deidentifier.arx.ARXConfiguration;
 import org.deidentifier.arx.certificate.elements.ElementData;
 import org.deidentifier.arx.common.WrappedBoolean;
 import org.deidentifier.arx.framework.check.groupify.HashGroupifyArray;
-
-import de.linearbits.suda2.SUDA2;
-import de.linearbits.suda2.SUDA2ListenerKey;
+import org.deidentifier.arx.suda2.SUDA2;
+import org.deidentifier.arx.suda2.SUDA2ListenerKey;
 
 /**
  * This criterion ensures that all keys are at least of a given size
